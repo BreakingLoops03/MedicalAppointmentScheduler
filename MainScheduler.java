@@ -1,287 +1,253 @@
 package trial;
 
-import java.io.*;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Scanner;
+import java.util.Stack;
 
 public class MainScheduler {
-    // Constants
     static final String PATIENTS_FILE = "patients.txt";
     static final String DOCTORS_FILE = "doctors.txt";
     static final String APPOINTMENTS_FILE = "appointments.txt";
     static final String USERS_FILE = "users.txt";
     static final String REQUESTS_FILE = "requests.txt";
     static final String LOGS_FILE = "logs.txt";
-    
-    // User types
+
     static final int USER_ADMIN = 1;
     static final int USER_DOCTOR = 2;
     static final int USER_PATIENT = 3;
-    
-    // Data structures
+
     static HashMap<String, String[]> users = new HashMap<>();
     static ArrayList<String[]> patients = new ArrayList<>();
     static ArrayList<String[]> doctors = new ArrayList<>();
     static LinkedList<String[]> appointmentHistory = new LinkedList<>();
     static Queue<String[]> appointmentRequests = new LinkedList<>();
     static Stack<String> operationLogs = new Stack<>();
-    static AppointmentNode appointmentRoot = null;
-    
-    // Current logged in user
-    static String currentUsername = null;
-    static int currentUserType = 0;
-    static String currentUserId = null;
-    
+    static AppointmentNode appointmentTreeRoot = null;
+
+    static String loggedInUser = null;
+    static int userRole = 0;
+    static String userID = null;
+
     static Scanner scanner = new Scanner(System.in);
-    static SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
     static SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-    
-    // Appointment Node class for binary tree
-    static class AppointmentNode implements Serializable {
-        private static final long serialVersionUID = 1L;
-        String id;
-        String patientId;
-        String doctorId;
-        Date date;
-        String reason;
-        String status;
-        AppointmentNode left;
-        AppointmentNode right;
-        
-        AppointmentNode(String id, String patientId, String doctorId, Date date, String reason, String status) {
-            this.id = id;
-            this.patientId = patientId;
-            this.doctorId = doctorId;
-            this.date = date;
-            this.reason = reason;
-            this.status = status;
-            this.left = null;
-            this.right = null;
+    static SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("dd/MM/yyyy");
+
+    static class AppointmentNode {
+        String appointmentID;
+        String patientID;
+        String doctorID;
+        Date appointmentDate;
+        String appointmentReason;
+        String appointmentStatus;
+        AppointmentNode leftChild;
+        AppointmentNode rightChild;
+
+        AppointmentNode(String appointmentID, String patientID, String doctorID, Date appointmentDate,
+                String appointmentReason, String appointmentStatus) {
+            this.appointmentID = appointmentID;
+            this.patientID = patientID;
+            this.doctorID = doctorID;
+            this.appointmentDate = appointmentDate;
+            this.appointmentReason = appointmentReason;
+            this.appointmentStatus = appointmentStatus;
+            this.leftChild = null;
+            this.rightChild = null;
         }
     }
-    
-    public static void main(String[] args) {
-        DataManager.loadData();
-        
-        // Add shutdown hook to save data on premature exit
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            DataManager.saveData();
-            System.out.println("Data saved due to unexpected termination.");
-        }));
-        
-        if (!hasAdmin()) {
-            createDefaultAdmin();
+
+    public static void main(String args[]) {
+        DataManager.loadAllData();
+        if (!hasAdminUser()) {
+            createAdminUser();
         }
-        
-        boolean running = true;
-        while (running) {
-            if (currentUsername == null) {
-                displayLoginMenu();
-            } else {
-                switch (currentUserType) {
-                    case USER_ADMIN:
-                        AdminFunctions.displayAdminMenu();
-                        break;
-                    case USER_DOCTOR:
-                        UserFunctions.displayDoctorMenu();
-                        break;
-                    case USER_PATIENT:
-                        UserFunctions.displayPatientMenu();
-                        break;
+        try {
+            while (true) {
+                if (loggedInUser == null) {
+                    displayMainMenu();
+                } else {
+                    if (userRole == USER_ADMIN) {
+                        AdminFunctions.showAdminMenu();
+                    } else if (userRole == USER_DOCTOR) {
+                        UserFunctions.showDoctorMenu();
+                    } else {
+                        UserFunctions.showPatientMenu();
+                    }
                 }
             }
+        } catch (Exception e) {
+            System.out.println("Goodbye!");
+        } finally {
+            DataManager.saveAllData();
         }
-        
-        scanner.close();
     }
-    
-    static boolean hasAdmin() {
+
+    static boolean hasAdminUser() {
         for (Map.Entry<String, String[]> entry : users.entrySet()) {
-            if (Integer.parseInt(entry.getValue()[1]) == USER_ADMIN) {
+            if (entry.getValue()[1].equals(String.valueOf(USER_ADMIN))) {
                 return true;
             }
         }
         return false;
     }
-    
-    static void createDefaultAdmin() {
-        String[] adminData = {"admin123", "1", "A001"};
-        users.put("admin", adminData);
-        logOperation("Default admin account created");
-        System.out.println("Default admin account created. Username: admin, Password: admin123");
+
+    static void createAdminUser() {
+        String[] admin = { "admin123", String.valueOf(USER_ADMIN), "A001" };
+        users.put("admin", admin);
+        recordLog("Admin account created");
     }
-    
-    static void displayLoginMenu() {
-        System.out.println("\n===== MEDICAL APPOINTMENT SCHEDULER =====");
+
+    static void displayMainMenu() {
+        System.out.println("\n===== Medical Appointment Scheduler =====");
         System.out.println("1. Login");
-        System.out.println("2. Register as Patient");
+        System.out.println("2. Register Patient");
         System.out.println("3. Exit");
-        System.out.println("=========================================");
-        
-        int choice = getIntInput("Enter your choice: ");
-        
-        switch (choice) {
-            case 1:
-                login();
-                break;
-            case 2:
-                registerPatient();
-                break;
-            case 3:
-                System.out.println("Thank you for using Medical Scheduler!");
-                System.exit(0);
-                break;
-            default:
-                System.out.println("Invalid choice. Please try again.");
+        System.out.println("========================================");
+        int menuChoice = getIntegerInput("Choice: ");
+        if (menuChoice == 1) {
+            performLogin();
+        } else if (menuChoice == 2) {
+            registerPatient();
+        } else if (menuChoice == 3) {
+            System.out.println("Goodbye!");
+            System.exit(0);
+        } else {
+            System.out.println("Wrong choice!");
         }
     }
-    
-    static void login() {
-        String username = getMandatoryStringInput("Enter username: ");
-        String password = getMandatoryStringInput("Enter password: ");
-        
-        if (users.containsKey(username)) {
-            String[] userData = users.get(username);
-            if (userData[0].equals(password)) {
-                currentUsername = username;
-                currentUserType = Integer.parseInt(userData[1]);
-                currentUserId = userData[2];
-                logOperation(username + " logged in");
-                System.out.println("Login successful!");
+
+    static void performLogin() {
+        String inputUsername = getStringInput("Username: ");
+        String inputPassword = getStringInput("Password: ");
+        if (users.containsKey(inputUsername)) {
+            String[] userData = users.get(inputUsername);
+            if (inputUsername.equals("admin") && inputPassword.equals("admin123")) {
+                handleLoginSuccess(inputUsername, USER_ADMIN, "A001");
+                return;
+            }
+            if (userData[0].equals(inputPassword)) {
+                if (userData[1].equals(String.valueOf(USER_DOCTOR))) {
+                    for (String[] doctorData : doctors) {
+                        if (doctorData[0].equals(userData[2]) && doctorData[4].equals("Inactive")) {
+                            System.out.println("Account deactivated! Contact admin.");
+                            return;
+                        }
+                    }
+                } else if (userData[1].equals(String.valueOf(USER_PATIENT))) {
+                    for (String[] patientData : patients) {
+                        if (patientData[0].equals(userData[2]) && patientData[2].equals("Inactive")) {
+                            System.out.println("Account deactivated! Contact admin.");
+                            return;
+                        }
+                    }
+                }
+                handleLoginSuccess(inputUsername, Integer.parseInt(userData[1]), userData[2]);
             } else {
-                System.out.println("Incorrect password!");
+                System.out.println("Wrong password!");
             }
         } else {
-            System.out.println("Username not found!");
+            System.out.println("User not found!");
         }
     }
-    
+
+    static void handleLoginSuccess(String username, int role, String id) {
+        loggedInUser = username;
+        userRole = role;
+        userID = id;
+        recordLog(username + " logged in");
+        System.out.println("Login successful!");
+    }
+
     static void registerPatient() {
-        String username = getMandatoryStringInput("Enter username: ");
-        
-        if (users.containsKey(username)) {
-            System.out.println("Username already exists!");
+        String newUsername = getStringInput("Enter username: ");
+        if (users.containsKey(newUsername)) {
+            System.out.println("Username taken!");
             return;
         }
-        
-        String password = getValidPassword("Enter password: ");
-        String phone = getValidPhoneNumber("Enter your phone number: ");
-        String email = getValidEmail("Enter your email (optional, press Enter to skip): ");
-        String address = getStringInput("Enter your address (optional, press Enter to skip): ");
-        
-        String patientId = "P" + String.format("%03d", patients.size() + 1);
-        
-        String[] userData = {password, String.valueOf(USER_PATIENT), patientId};
-        users.put(username, userData);
-        
-        String[] patientData = {patientId, phone, email, address, "Active"};
-        patients.add(patientData);
-        
-        logOperation("New patient registered: " + username);
-        System.out.println("Registration successful! You can now login.");
+        String newPassword = getValidPassword("Enter password: ");
+        String phoneNumber = getValidPhoneNumber("Enter phone number: ");
+        String newPatientID = "P" + String.format("%03d", patients.size() + 1);
+        String[] newUserData = { newPassword, String.valueOf(USER_PATIENT), newPatientID };
+        users.put(newUsername, newUserData);
+        String[] newPatientData = { newPatientID, phoneNumber, "Active" };
+        patients.add(newPatientData);
+        recordLog("New patient registered: " + newUsername);
+        System.out.println("Registration successful!");
     }
-    
-    static void logout() {
-        logOperation(currentUsername + " logged out");
-        currentUsername = null;
-        currentUserType = 0;
-        currentUserId = null;
-        DataManager.saveData();
-        System.out.println("Logged out successfully!");
+
+    static void recordLog(String logMessage) {
+        String logTime = new Date().toString();
+        operationLogs.push(logTime + " - " + logMessage);
     }
-    
-    static void logOperation(String operation) {
-        String timestamp = new Date().toString();
-        operationLogs.push(timestamp + " - " + operation);
-    }
-    
-    static String getStringInput(String prompt) {
-        System.out.print(prompt);
+
+    static String getStringInput(String inputPrompt) {
+        System.out.print(inputPrompt);
         return scanner.nextLine().trim();
     }
-    
-    static String getMandatoryStringInput(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            String input = scanner.nextLine().trim();
-            if (!input.isEmpty()) {
-                return input;
-            }
-            System.out.println("This field is mandatory. Please enter a valid value.");
-        }
-    }
-    
-    static int getIntInput(String prompt) {
+
+    static int getIntegerInput(String inputPrompt) {
         while (true) {
             try {
-                System.out.print(prompt);
+                System.out.print(inputPrompt);
                 return Integer.parseInt(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number!");
+                System.out.println("Enter a number!");
             }
         }
     }
-    
-    static String getValidPhoneNumber(String prompt) {
+
+    static String getValidPhoneNumber(String inputPrompt) {
         while (true) {
-            System.out.print(prompt);
-            String phone = scanner.nextLine().trim();
-            
-            // Remove any non-digit characters
-            String digitsOnly = phone.replaceAll("[^0-9]", "");
-            
-            // Validate length and digits
-            if (digitsOnly.length() == 10 && digitsOnly.matches("\\d{10}")) {
-                if (isPhoneNumberUnique(digitsOnly)) {
-                    return digitsOnly; // Return plain 10-digit number
-                } else {
-                    System.out.println("This phone number is already registered. Please enter a different number.");
-                }
+            System.out.print(inputPrompt);
+            String phoneNumber = scanner.nextLine().trim();
+            String phoneDigits = phoneNumber.replaceAll("[^0-9]", "");
+            if (phoneDigits.length() != 10) {
+                System.out.println("Need 10 digits!");
+                continue;
+            }
+            if (isPhoneNumberUnique(phoneDigits)) {
+                return phoneDigits;
             } else {
-                System.out.println("Invalid phone number. Please enter exactly 10 digits (you can use spaces or dashes).");
-                System.out.println("Example: 123 456 7890 or 123-456-7890");
+                System.out.println("Phone already used!");
             }
         }
     }
-    
-    static boolean isPhoneNumberUnique(String phone) {
-        for (String[] patient : patients) {
-            if (patient[1].equals(phone)) {
+
+    static boolean isPhoneNumberUnique(String phoneNumber) {
+        for (String[] patientData : patients) {
+            if (patientData[1].equals(phoneNumber)) {
                 return false;
             }
         }
-        for (String[] doctor : doctors) {
-            if (doctor[1].equals(phone)) {
+        for (String[] doctorData : doctors) {
+            if (doctorData[3].equals(phoneNumber)) {
                 return false;
             }
         }
         return true;
     }
-    
-    static String getValidEmail(String prompt) {
+
+    static String getValidPassword(String inputPrompt) {
         while (true) {
-            System.out.print(prompt);
-            String email = scanner.nextLine().trim();
-            if (email.isEmpty() || isValidEmail(email)) {
-                return email;
+            System.out.print(inputPrompt);
+            String inputPassword = scanner.nextLine().trim();
+            if (inputPassword.length() >= 6) {
+                return inputPassword;
             }
-            System.out.println("Invalid email format. Must contain '@' and '.'. Please try again or press Enter to skip.");
+            System.out.println("Password too short!");
         }
     }
-    
-    static boolean isValidEmail(String email) {
-        return email.contains("@") && email.contains(".") && email.indexOf("@") < email.lastIndexOf(".");
-    }
-    
-    static String getValidPassword(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            String password = scanner.nextLine().trim();
-            if (password.length() >= 6) {
-                return password;
-            }
-            System.out.println("Password must be at least 6 characters long. Please try again.");
-        }
+
+    static void performLogout() {
+        recordLog(loggedInUser + " logged out");
+        loggedInUser = null;
+        userRole = 0;
+        userID = null;
+        System.out.println("Logged out!");
     }
 }
