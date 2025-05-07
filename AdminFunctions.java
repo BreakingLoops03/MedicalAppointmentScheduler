@@ -5,29 +5,23 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 public class AdminFunctions {
     static void showAdminMenu() {
-        while (true) {
-            System.out.println("\n===== Admin Menu =====");
-            System.out.println("1. Manage Doctors");
-            System.out.println("2. Manage Patients");
-            System.out.println("3. Approve Requests");
-            System.out.println("4. View Appointments");
-            System.out.println("5. View Logs");
-            System.out.println("6. Logout");
-            System.out.println("=====================");
-            int menuChoice = MainScheduler.getIntegerInput("Choice: ");
-            if (!handleMenuChoice(menuChoice)) {
-                break;
-            }
-        }
+        System.out.println("\n===== Admin Menu =====");
+        System.out.println("1. Manage Doctors");
+        System.out.println("2. Manage Patients");
+        System.out.println("3. Approve Requests");
+        System.out.println("4. View Appointments");
+        System.out.println("5. View Logs");
+        System.out.println("6. Logout");
+        System.out.println("=====================");
+        handleAdminMenuChoice(MainScheduler.getIntegerInput("Choice: "));
     }
 
-    static boolean handleMenuChoice(int menuChoice) {
+    static void handleAdminMenuChoice(int choice) {
         try {
-            switch (menuChoice) {
+            switch (choice) {
                 case 1:
                     manageDoctorRecords();
                     break;
@@ -45,14 +39,12 @@ public class AdminFunctions {
                     break;
                 case 6:
                     MainScheduler.performLogout();
-                    return false;
+                    break;
                 default:
-                    System.out.println("Wrong choice!");
+                    System.out.println("Invalid choice!");
             }
-            return true;
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            return true;
+            System.out.println("Error occurred: " + e.getMessage());
         }
     }
 
@@ -66,8 +58,11 @@ public class AdminFunctions {
         System.out.println("6. Activate Doctor");
         System.out.println("7. Back");
         System.out.println("-------------------------");
-        int menuChoice = MainScheduler.getIntegerInput("Choice: ");
-        switch (menuChoice) {
+        handleDoctorMenuChoice(MainScheduler.getIntegerInput("Choice: "));
+    }
+
+    static void handleDoctorMenuChoice(int choice) {
+        switch (choice) {
             case 1:
                 createDoctor();
                 break;
@@ -87,211 +82,248 @@ public class AdminFunctions {
                 activateDoctorAccount();
                 break;
             case 7:
-                return;
+                break;
             default:
-                System.out.println("Wrong choice!");
+                System.out.println("Invalid choice!");
         }
     }
 
     static void createDoctor() {
-        String newUsername = MainScheduler.getStringInput("Username: ");
-        if (MainScheduler.users.containsKey(newUsername)) {
-            System.out.println("Username taken!");
+        String username = MainScheduler.getStringInput("Username: ");
+        if (MainScheduler.users.containsKey(username)) {
+            System.out.println("Username already taken!");
             return;
         }
-        String newPassword = MainScheduler.getValidPassword("Password: ");
-        String doctorSpecialty = selectSpecialty();
-        String phoneNumber = MainScheduler.getValidPhoneNumber("Phone: ");
-        String newDoctorID = "D" + String.format("%03d", MainScheduler.doctors.size() + 1);
-        String[] newUserData = { newPassword, String.valueOf(MainScheduler.USER_DOCTOR), newDoctorID };
-        MainScheduler.users.put(newUsername, newUserData);
-        String[] newDoctorData = { newDoctorID, newUsername, doctorSpecialty, phoneNumber, "Active" };
-        MainScheduler.doctors.add(newDoctorData);
-        MainScheduler.recordLog("Added doctor: " + newUsername);
-        System.out.println("Doctor added!");
+
+        String password = MainScheduler.getValidPassword("Password: ");
+        String specialty = selectSpecialty();
+        String phone = MainScheduler.getValidPhoneNumber("Phone: ");
+        String doctorID = "D" + String.format("%03d", MainScheduler.doctors.size() + 1);
+
+        String[] userData = { String.valueOf(MainScheduler.USER_DOCTOR) };
+        String[] doctorData = { doctorID, username, password, phone, "Active" };
+
+        MainScheduler.users.put(username, userData);
+        MainScheduler.doctors.add(doctorData);
+        MainScheduler.recordLog("Added doctor: " + username);
+        DataManager.saveAllData();
+        System.out.println("Doctor added successfully!");
     }
 
     static String selectSpecialty() {
-        System.out.println("\nSpecialties:");
-        System.out.println("1. Cardiology");
-        System.out.println("2. Neurology");
-        System.out.println("3. Orthopedics");
-        System.out.println("4. Pediatrics");
-        System.out.println("5. General Medicine");
+        String[] specialties = { "Cardiology", "Neurology", "Orthopedics", "Pediatrics", "General Medicine" };
+        System.out.println("\nAvailable Specialties:");
+        for (int i = 0; i < specialties.length; i++) {
+            System.out.println((i + 1) + ". " + specialties[i]);
+        }
+
         while (true) {
-            String doctorSpecialty = MainScheduler.getStringInput("Enter specialty: ");
-            if (doctorSpecialty.equalsIgnoreCase("Cardiology") ||
-                    doctorSpecialty.equalsIgnoreCase("Neurology") ||
-                    doctorSpecialty.equalsIgnoreCase("Orthopedics") ||
-                    doctorSpecialty.equalsIgnoreCase("Pediatrics") ||
-                    doctorSpecialty.equalsIgnoreCase("General Medicine")) {
-                return doctorSpecialty;
+            int choice = MainScheduler.getIntegerInput("Select specialty number: ");
+            if (choice >= 1 && choice <= specialties.length) {
+                return specialties[choice - 1];
             }
-            System.out.println("Pick from list!");
+            System.out.println("Please select a valid specialty!");
         }
     }
 
     static void displayDoctors() {
         if (MainScheduler.doctors.isEmpty()) {
-            System.out.println("No doctors!");
+            System.out.println("No doctors registered!");
             return;
         }
+
         System.out.println("\n----- Doctors List -----");
         System.out.printf("%-10s %-15s %-15s %-15s %-10s\n", "ID", "Name", "Phone", "Specialty", "Status");
-        System.out.println("--------------------------------------------");
-        for (int i = 0; i < MainScheduler.doctors.size(); i++) {
-            String[] doctorData = MainScheduler.doctors.get(i);
-            String formattedPhone;
-            if (doctorData[3].length() == 10) {
-                formattedPhone = doctorData[3].substring(0, 3) + "-" + doctorData[3].substring(3, 6) + "-"
-                        + doctorData[3].substring(6);
-            } else {
-                formattedPhone = doctorData[3];
-            }
-            System.out.printf("%-10s %-15s %-15s %-15s %-10s\n", doctorData[0], doctorData[1], formattedPhone,
-                    doctorData[2], doctorData[4]);
+        System.out.println("-------------------------------------------------");
+        for (String[] doctor : MainScheduler.doctors) {
+            String phone = formatPhoneNumber(doctor[3]);
+            System.out.printf("%-10s %-15s %-15s %-15s %-10s\n",
+                    doctor[0], doctor[1], phone, doctor[2], doctor[4]);
         }
+    }
+
+    static String formatPhoneNumber(String phone) {
+        if (phone.length() == 10) {
+            return phone.substring(0, 3) + "-" + phone.substring(3, 6) + "-" + phone.substring(6);
+        }
+        return phone;
     }
 
     static void editDoctor() {
         displayDoctors();
         String doctorID = MainScheduler.getStringInput("Enter Doctor ID: ");
-        int doctorIndex = findDoctorIndex(doctorID);
-        if (doctorIndex == -1) {
+        int index = findDoctorIndex(doctorID);
+
+        if (index == -1) {
             System.out.println("Doctor not found!");
             return;
         }
-        String[] doctorData = MainScheduler.doctors.get(doctorIndex);
-        System.out.println("Current: Phone: " + doctorData[3] + ", Specialty: " + doctorData[2]);
-        String doctorSpecialty = MainScheduler.getStringInput("New Specialty: ");
-        if (doctorSpecialty.isEmpty()) {
-            doctorSpecialty = doctorData[2];
+
+        String[] doctor = MainScheduler.doctors.get(index);
+        System.out.println("Current: Phone: " + doctor[3] + ", Specialty: " + doctor[2]);
+
+        String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
+        if (!MainScheduler.isPhoneNumberUnique(phone)) {
+            System.out.println("Phone number already in use!");
+            return;
         }
-        doctorData[2] = doctorSpecialty;
-        String phoneNumber = MainScheduler.getValidPhoneNumber("New Phone: ");
-        doctorData[3] = phoneNumber;
+        String specialty = selectSpecialty();
+
+        doctor[3] = phone;
+        doctor[2] = specialty;
+
         MainScheduler.recordLog("Doctor updated: " + doctorID);
-        System.out.println("Doctor updated!");
+        DataManager.saveAllData();
+        System.out.println("Doctor updated successfully!");
     }
 
     static void deactivateDoctorAccount() {
         displayDoctors();
         String doctorID = MainScheduler.getStringInput("Enter Doctor ID: ");
-        int doctorIndex = findDoctorIndex(doctorID);
-        if (doctorIndex == -1) {
+        int index = findDoctorIndex(doctorID);
+
+        if (index == -1) {
             System.out.println("Doctor not found!");
             return;
         }
-        if (MainScheduler.doctors.get(doctorIndex)[4].equals("Inactive")) {
-            System.out.println("Already deactivated!");
+
+        String[] doctor = MainScheduler.doctors.get(index);
+        if (doctor[4].equals("Inactive")) {
+            System.out.println("Doctor already deactivated!");
             return;
         }
-        String confirmation = MainScheduler.getStringInput("Confirm deactivation of doctor " + doctorID + "? (y/n): ");
-        if (!confirmation.equalsIgnoreCase("y")) {
-            System.out.println("Deactivation cancelled!");
+
+        if (!confirmAction("deactivation of doctor " + doctorID)) {
             return;
         }
-        MainScheduler.doctors.get(doctorIndex)[4] = "Inactive";
-        ArrayList<MainScheduler.AppointmentNode> doctorAppointments = new ArrayList<>();
-        UserFunctions.collectDoctorAppointments(MainScheduler.appointmentTreeRoot, doctorID, doctorAppointments);
-        for (MainScheduler.AppointmentNode appointment : doctorAppointments) {
-            if (!appointment.appointmentStatus.equals("Cancelled")) {
-                appointment.appointmentStatus = "Cancelled";
-                for (String[] appointmentRecord : MainScheduler.appointmentHistory) {
-                    if (appointmentRecord[0].equals(appointment.appointmentID)) {
-                        appointmentRecord[5] = "Cancelled";
-                        appointmentRecord[6] = new Date().toString();
-                        break;
-                    }
-                }
-                MainScheduler
-                        .recordLog("Appointment cancelled due to doctor deactivation: " + appointment.appointmentID);
-            }
-        }
+
+        doctor[4] = "Inactive";
+        cancelDoctorAppointments(doctorID);
+
         MainScheduler.recordLog("Doctor deactivated: " + doctorID);
+        DataManager.saveAllData();
         System.out.println("Doctor deactivated and all appointments cancelled!");
     }
 
     static void deleteDoctor() {
         displayDoctors();
         String doctorID = MainScheduler.getStringInput("Enter Doctor ID: ");
-        int doctorIndex = findDoctorIndex(doctorID);
-        if (doctorIndex == -1) {
+        int index = findDoctorIndex(doctorID);
+
+        if (index == -1) {
             System.out.println("Doctor not found!");
             return;
         }
-        ArrayList<MainScheduler.AppointmentNode> doctorAppointments = new ArrayList<>();
-        UserFunctions.collectDoctorAppointments(MainScheduler.appointmentTreeRoot, doctorID, doctorAppointments);
-        if (!doctorAppointments.isEmpty()) {
-            System.out.println("Cannot remove: Has appointments!");
+
+        ArrayList<MainScheduler.AppointmentNode> appointments = new ArrayList<>();
+        UserFunctions.collectDoctorAppointments(doctorID, appointments);
+
+        if (!appointments.isEmpty()) {
+            System.out.println("Cannot remove: Doctor has active appointments!");
             return;
         }
-        String confirmation = MainScheduler.getStringInput("Confirm removal of doctor " + doctorID + "? (y/n): ");
-        if (!confirmation.equalsIgnoreCase("y")) {
-            System.out.println("Removal cancelled!");
+
+        if (!confirmAction("removal of doctor " + doctorID)) {
             return;
         }
-        MainScheduler.doctors.remove(doctorIndex);
-        String username = null;
-        for (Map.Entry<String, String[]> entry : MainScheduler.users.entrySet()) {
-            if (entry.getValue()[2].equals(doctorID)) {
-                username = entry.getKey();
-                break;
-            }
-        }
+
+        MainScheduler.doctors.remove(index);
+        String username = MainScheduler.users.entrySet().stream()
+                .filter(e -> e.getValue()[0].equals(String.valueOf(MainScheduler.USER_DOCTOR)))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
         if (username != null) {
             MainScheduler.users.remove(username);
         }
-        Queue<String[]> tempRequests = new LinkedList<>();
-        for (int i = 0; i < MainScheduler.appointmentRequests.size(); i++) {
-            String[] requestData = MainScheduler.appointmentRequests.poll();
-            if (!requestData[2].equals(doctorID)) {
-                tempRequests.add(requestData);
+
+        LinkedList<String[]> remainingRequests = new LinkedList<>();
+        for (String[] request : MainScheduler.appointmentRequests) {
+            if (!request[2].equals(doctorID)) {
+                remainingRequests.add(request);
             } else {
-                MainScheduler.recordLog("Request cancelled: " + requestData[0]);
+                MainScheduler.recordLog("Request cancelled: " + request[0]);
             }
         }
-        MainScheduler.appointmentRequests = tempRequests;
+        MainScheduler.appointmentRequests = remainingRequests;
+
         MainScheduler.recordLog("Doctor removed: " + doctorID);
-        System.out.println("Doctor removed!");
+        DataManager.saveAllData();
+        System.out.println("Doctor removed successfully!");
     }
 
     static void activateDoctorAccount() {
-        boolean hasInactiveDoctors = false;
-        System.out.println("\n----- Inactive Doctors -----");
-        System.out.printf("%-10s %-15s %-15s %-10s\n", "ID", "Phone", "Specialty", "Status");
-        System.out.println("--------------------------------------------");
-        for (int i = 0; i < MainScheduler.doctors.size(); i++) {
-            String[] doctorData = MainScheduler.doctors.get(i);
-            if (doctorData[4].equals("Inactive")) {
-                System.out.printf("%-10s %-15s %-15s %-10s\n", doctorData[0], doctorData[3], doctorData[2],
-                        doctorData[4]);
-                hasInactiveDoctors = true;
+        ArrayList<String[]> inactiveDoctors = new ArrayList<>();
+        for (String[] doctor : MainScheduler.doctors) {
+            if (doctor[4].equals("Inactive")) {
+                inactiveDoctors.add(doctor);
             }
         }
-        if (!hasInactiveDoctors) {
+
+        if (inactiveDoctors.isEmpty()) {
             System.out.println("No inactive doctors!");
             return;
         }
+
+        System.out.println("\n----- Inactive Doctors -----");
+        System.out.printf("%-10s %-15s %-15s %-10s\n", "ID", "Phone", "Specialty", "Status");
+        System.out.println("--------------------------------------------");
+        for (String[] doctor : inactiveDoctors) {
+            System.out.printf("%-10s %-15s %-15s %-10s\n", doctor[0], doctor[3], doctor[2], doctor[4]);
+        }
+
         String doctorID = MainScheduler.getStringInput("Enter Doctor ID: ");
-        int doctorIndex = findDoctorIndex(doctorID);
-        if (doctorIndex == -1) {
+        int index = findDoctorIndex(doctorID);
+
+        if (index == -1) {
             System.out.println("Doctor not found!");
             return;
         }
-        String[] doctorData = MainScheduler.doctors.get(doctorIndex);
-        if (doctorData[4].equals("Active")) {
-            System.out.println("Already active!");
+
+        String[] doctor = MainScheduler.doctors.get(index);
+        if (doctor[4].equals("Active")) {
+            System.out.println("Doctor already active!");
             return;
         }
-        String confirmation = MainScheduler.getStringInput("Confirm activation of doctor " + doctorID + "? (y/n): ");
-        if (!confirmation.equalsIgnoreCase("y")) {
-            System.out.println("Activation cancelled!");
+
+        if (!confirmAction("activation of doctor " + doctorID)) {
             return;
         }
-        doctorData[4] = "Active";
+
+        doctor[4] = "Active";
         MainScheduler.recordLog("Doctor activated: " + doctorID);
-        System.out.println("Doctor activated!");
+        DataManager.saveAllData();
+        System.out.println("Doctor activated successfully!");
+    }
+
+    static boolean confirmAction(String action) {
+        String confirmation = MainScheduler.getStringInput(
+                "Confirm " + action + "? (y/n): ");
+        if (!confirmation.equalsIgnoreCase("y")) {
+            System.out.println("Action cancelled!");
+            return false;
+        }
+        return true;
+    }
+
+    static void cancelDoctorAppointments(String doctorID) {
+        ArrayList<MainScheduler.AppointmentNode> appointments = new ArrayList<>();
+        UserFunctions.collectDoctorAppointments(doctorID, appointments);
+
+        for (MainScheduler.AppointmentNode appt : appointments) {
+            if (!appt.appointmentStatus.equals("Cancelled")) {
+                appt.appointmentStatus = "Cancelled";
+                for (String[] record : MainScheduler.appointmentHistory) {
+                    if (record[0].equals(appt.appointmentID)) {
+                        record[5] = "Cancelled";
+                        record[6] = new Date().toString();
+                        break;
+                    }
+                }
+                MainScheduler.recordLog("Appointment cancelled due to doctor deactivation: " + appt.appointmentID);
+            }
+        }
     }
 
     static int findDoctorIndex(String doctorID) {
@@ -310,8 +342,11 @@ public class AdminFunctions {
         System.out.println("3. Deactivate Patient");
         System.out.println("4. Back");
         System.out.println("--------------------------");
-        int menuChoice = MainScheduler.getIntegerInput("Choice: ");
-        switch (menuChoice) {
+        handlePatientMenuChoice(MainScheduler.getIntegerInput("Choice: "));
+    }
+
+    static void handlePatientMenuChoice(int choice) {
+        switch (choice) {
             case 1:
                 displayPatients();
                 break;
@@ -322,79 +357,91 @@ public class AdminFunctions {
                 deactivatePatientAccount();
                 break;
             case 4:
-                return;
+                break;
             default:
-                System.out.println("Wrong choice!");
+                System.out.println("Invalid choice!");
         }
     }
 
     static void displayPatients() {
         if (MainScheduler.patients.isEmpty()) {
-            System.out.println("No patients!");
+            System.out.println("No patients registered!");
             return;
         }
+
         System.out.println("\n----- Patients List -----");
-        System.out.printf("%-10s %-15s %-10s\n", "ID", "Phone", "Status");
+        System.out.printf("%-10s %-15s %-15s %-10s\n", "ID", "Username", "Phone", "Status");
         System.out.println("--------------------------------------------");
-        for (int i = 0; i < MainScheduler.patients.size(); i++) {
-            String[] patientData = MainScheduler.patients.get(i);
-            System.out.printf("%-10s %-15s %-10s\n", patientData[0], patientData[1], patientData[2]);
+        for (String[] patient : MainScheduler.patients) {
+            System.out.printf("%-10s %-15s %-15s %-10s\n", patient[0], patient[1], patient[3], patient[4]);
         }
     }
 
     static void editPatient() {
         displayPatients();
         String patientID = MainScheduler.getStringInput("Enter Patient ID: ");
-        int patientIndex = findPatientIndex(patientID);
-        if (patientIndex == -1) {
+        int index = findPatientIndex(patientID);
+
+        if (index == -1) {
             System.out.println("Patient not found!");
             return;
         }
-        String[] patientData = MainScheduler.patients.get(patientIndex);
-        System.out.println("Current: Phone: " + patientData[1]);
-        String phoneNumber = MainScheduler.getValidPhoneNumber("New Phone: ");
-        patientData[1] = phoneNumber;
+
+        String[] patient = MainScheduler.patients.get(index);
+        System.out.println("Current: Phone: " + patient[3]);
+
+        String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
+        if (!MainScheduler.isPhoneNumberUnique(phone)) {
+            System.out.println("Phone number already in use!");
+            return;
+        }
+        patient[3] = phone;
+
         MainScheduler.recordLog("Patient updated: " + patientID);
-        System.out.println("Patient updated!");
+        DataManager.saveAllData();
+        System.out.println("Patient updated successfully!");
     }
 
     static void deactivatePatientAccount() {
         displayPatients();
         String patientID = MainScheduler.getStringInput("Enter Patient ID: ");
-        int patientIndex = findPatientIndex(patientID);
-        if (patientIndex == -1) {
+        int index = findPatientIndex(patientID);
+
+        if (index == -1) {
             System.out.println("Patient not found!");
             return;
         }
-        String[] patientData = MainScheduler.patients.get(patientIndex);
-        if (patientData[2].equals("Inactive")) {
-            System.out.println("Already deactivated!");
+
+        String[] patient = MainScheduler.patients.get(index);
+        if (patient[4].equals("Inactive")) {
+            System.out.println("Patient already deactivated!");
             return;
         }
-        String confirmation = MainScheduler
-                .getStringInput("Confirm deactivation of patient " + patientID + "? (y/n): ");
-        if (!confirmation.equalsIgnoreCase("y")) {
-            System.out.println("Deactivation cancelled!");
+
+        if (!confirmAction("deactivation of patient " + patientID)) {
             return;
         }
-        patientData[2] = "Inactive";
-        ArrayList<MainScheduler.AppointmentNode> patientAppointments = new ArrayList<>();
-        UserFunctions.collectPatientAppointments(MainScheduler.appointmentTreeRoot, patientID, patientAppointments);
-        for (MainScheduler.AppointmentNode appointment : patientAppointments) {
-            if (!appointment.appointmentStatus.equals("Cancelled")) {
-                appointment.appointmentStatus = "Cancelled";
-                for (String[] appointmentRecord : MainScheduler.appointmentHistory) {
-                    if (appointmentRecord[0].equals(appointment.appointmentID)) {
-                        appointmentRecord[5] = "Cancelled";
-                        appointmentRecord[6] = new Date().toString();
+
+        patient[4] = "Inactive";
+        ArrayList<MainScheduler.AppointmentNode> appointments = new ArrayList<>();
+        UserFunctions.collectPatientAppointments(patientID, appointments);
+
+        for (MainScheduler.AppointmentNode appt : appointments) {
+            if (!appt.appointmentStatus.equals("Cancelled")) {
+                appt.appointmentStatus = "Cancelled";
+                for (String[] record : MainScheduler.appointmentHistory) {
+                    if (record[0].equals(appt.appointmentID)) {
+                        record[5] = "Cancelled";
+                        record[6] = new Date().toString();
                         break;
                     }
                 }
-                MainScheduler
-                        .recordLog("Appointment cancelled due to patient deactivation: " + appointment.appointmentID);
+                MainScheduler.recordLog("Appointment cancelled due to patient deactivation: " + appt.appointmentID);
             }
         }
+
         MainScheduler.recordLog("Patient deactivated: " + patientID);
+        DataManager.saveAllData();
         System.out.println("Patient deactivated and all appointments cancelled!");
     }
 
@@ -409,147 +456,117 @@ public class AdminFunctions {
 
     static void processAppointmentRequests() {
         if (MainScheduler.appointmentRequests.isEmpty()) {
-            System.out.println("No requests!");
+            System.out.println("No pending requests!");
             return;
         }
+
+        ArrayList<String[]> requests = new ArrayList<>(MainScheduler.appointmentRequests);
+        MainScheduler.appointmentRequests.clear();
+
         System.out.println("\n----- Pending Requests -----");
         System.out.printf("%-5s %-10s %-10s %-20s %-15s\n", "No.", "Patient", "Doctor", "Date", "Reason");
-        System.out.println("--------------------------------------------");
-        ArrayList<String[]> tempRequests = new ArrayList<>();
-        int requestCount = 1;
-        for (String[] requestData : MainScheduler.appointmentRequests) {
-            tempRequests.add(requestData);
-            System.out.printf("%-5d %-10s %-10s %-20s %-15s\n", requestCount++, requestData[1], requestData[2],
-                    requestData[3], requestData[4]);
+        System.out.println("-------------------------------------------------");
+        for (int i = 0; i < requests.size(); i++) {
+            String[] request = requests.get(i);
+            System.out.printf("%-5d %-10s %-10s %-20s %-15s\n",
+                    i + 1, request[1], request[2], request[3], request[4]);
         }
+
         System.out.println("\nOptions:");
         System.out.println("0: Approve all");
         System.out.println("-1: Reject all");
-        System.out.println("1 to " + tempRequests.size() + ": Approve specific request");
-        int requestNumber = MainScheduler.getIntegerInput("Enter choice: ");
-        if (requestNumber == 0) {
-            String confirmation = MainScheduler.getStringInput("Confirm approve all requests? (y/n): ");
-            if (!confirmation.equalsIgnoreCase("y")) {
-                System.out.println("Approval cancelled!");
-                MainScheduler.appointmentRequests.addAll(tempRequests);
-                return;
-            }
-            for (String[] requestData : tempRequests) {
-                approveRequest(requestData);
-            }
-            System.out.println("All approved!");
-        } else if (requestNumber == -1) {
-            String confirmation = MainScheduler.getStringInput("Confirm reject all requests? (y/n): ");
-            if (!confirmation.equalsIgnoreCase("y")) {
-                System.out.println("Rejection cancelled!");
-                MainScheduler.appointmentRequests.addAll(tempRequests);
-                return;
-            }
-            for (String[] requestData : tempRequests) {
-                MainScheduler.recordLog("Request rejected: " + requestData[0]);
-            }
-            System.out.println("All rejected!");
-        } else if (requestNumber > 0 && requestNumber <= tempRequests.size()) {
-            String confirmation = MainScheduler
-                    .getStringInput("Confirm approve request " + requestNumber + "? (y/n): ");
-            if (!confirmation.equalsIgnoreCase("y")) {
-                System.out.println("Approval cancelled!");
-                MainScheduler.appointmentRequests.addAll(tempRequests);
-                return;
-            }
-            approveRequest(tempRequests.get(requestNumber - 1));
-            for (int i = 0; i < tempRequests.size(); i++) {
-                if (i != requestNumber - 1) {
-                    MainScheduler.appointmentRequests.add(tempRequests.get(i));
+        System.out.println("1 to " + requests.size() + ": Approve specific request");
+
+        int choice = MainScheduler.getIntegerInput("Enter choice: ");
+        if (choice == 0) {
+            if (confirmAction("approve all requests")) {
+                for (String[] request : requests) {
+                    approveRequest(request);
                 }
+                System.out.println("All requests approved!");
+            } else {
+                MainScheduler.appointmentRequests.addAll(requests);
             }
-            System.out.println("Request approved!");
+        } else if (choice == -1) {
+            if (confirmAction("reject all requests")) {
+                for (String[] request : requests) {
+                    MainScheduler.recordLog("Request rejected: " + request[0]);
+                }
+                System.out.println("All requests rejected!");
+            } else {
+                MainScheduler.appointmentRequests.addAll(requests);
+            }
+        } else if (choice > 0 && choice <= requests.size()) {
+            if (confirmAction("approve request " + choice)) {
+                approveRequest(requests.get(choice - 1));
+                for (int i = 0; i < requests.size(); i++) {
+                    if (i != choice - 1) {
+                        MainScheduler.appointmentRequests.add(requests.get(i));
+                    }
+                }
+                System.out.println("Request approved!");
+            } else {
+                MainScheduler.appointmentRequests.addAll(requests);
+            }
         } else {
             System.out.println("Invalid choice!");
-            MainScheduler.appointmentRequests.addAll(tempRequests);
+            MainScheduler.appointmentRequests.addAll(requests);
         }
+
+        DataManager.saveAllData();
     }
 
-    static void approveRequest(String[] requestData) {
-        String newAppointmentID = "A" + String.format("%03d", getNextAppointmentID());
+    static void approveRequest(String[] request) {
         try {
-            Date date = MainScheduler.dateTimeFormat.parse(requestData[3]);
-            MainScheduler.AppointmentNode newNode = new MainScheduler.AppointmentNode(
-                    newAppointmentID, requestData[1], requestData[2], date, requestData[4], "Scheduled");
-            if (MainScheduler.appointmentTreeRoot == null) {
-                MainScheduler.appointmentTreeRoot = newNode;
-            } else {
-                insertAppointmentNode(MainScheduler.appointmentTreeRoot, newNode);
+            Date date = MainScheduler.dateTimeFormat.parse(request[3]);
+            if (UserFunctions.hasSchedulingConflict(request[2], date)) {
+                MainScheduler.recordLog("Request rejected due to scheduling conflict: " + request[0]);
+                return;
             }
-            String[] appointmentRecord = { newAppointmentID, requestData[1], requestData[2], requestData[3],
-                    requestData[4], "Scheduled", new Date().toString() };
-            MainScheduler.appointmentHistory.add(appointmentRecord);
-            MainScheduler.recordLog("Appointment approved: " + newAppointmentID);
+
+            String appointmentID = "A" + String.format("%03d", MainScheduler.nextAppointmentID++);
+            MainScheduler.AppointmentNode node = new MainScheduler.AppointmentNode(
+                    appointmentID, request[1], request[2], date, request[4], "Scheduled");
+
+            DataManager.insertAppointmentNode(node);
+
+            String[] record = { appointmentID, request[1], request[2], request[3], request[4], "Scheduled",
+                    new Date().toString() };
+            MainScheduler.appointmentHistory.add(record);
+
+            MainScheduler.recordLog("Appointment approved: " + appointmentID);
         } catch (ParseException e) {
-            System.out.println("Bad date!");
-        }
-    }
-
-    static int getNextAppointmentID() {
-        return countTreeNodes(MainScheduler.appointmentTreeRoot) + 1;
-    }
-
-    static int countTreeNodes(MainScheduler.AppointmentNode node) {
-        if (node == null) {
-            return 0;
-        }
-        return 1 + countTreeNodes(node.leftChild) + countTreeNodes(node.rightChild);
-    }
-
-    static void insertAppointmentNode(MainScheduler.AppointmentNode currentNode,
-            MainScheduler.AppointmentNode newNode) {
-        if (newNode.appointmentDate.before(currentNode.appointmentDate)) {
-            if (currentNode.leftChild == null) {
-                currentNode.leftChild = newNode;
-            } else {
-                insertAppointmentNode(currentNode.leftChild, newNode);
-            }
-        } else {
-            if (currentNode.rightChild == null) {
-                currentNode.rightChild = newNode;
-            } else {
-                insertAppointmentNode(currentNode.rightChild, newNode);
-            }
+            MainScheduler.recordLog("Failed to approve request " + request[0] + ": Invalid date format");
         }
     }
 
     static void displayAllAppointments() {
-        if (MainScheduler.appointmentTreeRoot == null) {
+        if (MainScheduler.appointments.isEmpty()) {
             System.out.println("No appointments!");
             return;
         }
-        System.out.println("\n----- All Appointments -----");
-        System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n", "ID", "Patient", "Doctor", "Date", "Reason",
-                "Status");
-        System.out.println("--------------------------------------------");
-        traverseInorder(MainScheduler.appointmentTreeRoot);
-    }
 
-    static void traverseInorder(MainScheduler.AppointmentNode node) {
-        if (node == null) {
-            return;
-        }
-        traverseInorder(node.leftChild);
+        System.out.println("\n----- All Appointments -----");
         System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n",
-                node.appointmentID, node.patientID, node.doctorID,
-                MainScheduler.dateTimeFormat.format(node.appointmentDate),
-                node.appointmentReason, node.appointmentStatus);
-        traverseInorder(node.rightChild);
+                "ID", "Patient", "Doctor", "Date", "Reason", "Status");
+        System.out.println("-------------------------------------------------");
+        for (MainScheduler.AppointmentNode node : MainScheduler.appointments) {
+            System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n",
+                    node.appointmentID, node.patientID, node.doctorID,
+                    MainScheduler.dateTimeFormat.format(node.appointmentDate),
+                    node.appointmentReason, node.appointmentStatus);
+        }
     }
 
     static void displayLogs() {
         if (MainScheduler.operationLogs.isEmpty()) {
-            System.out.println("No logs!");
+            System.out.println("No logs available!");
             return;
         }
+
         System.out.println("\n----- Operation Logs -----");
-        for (int i = 0; i < MainScheduler.operationLogs.size(); i++) {
-            System.out.println(MainScheduler.operationLogs.get(i));
+        for (String log : MainScheduler.operationLogs) {
+            System.out.println(log);
         }
     }
 }
