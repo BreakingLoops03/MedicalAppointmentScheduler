@@ -2,6 +2,7 @@ package trial;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 
 public class UserFunctions {
@@ -13,7 +14,13 @@ public class UserFunctions {
         System.out.println("4. Update Profile");
         System.out.println("5. Logout");
         System.out.println("======================");
-        handleDoctorMenuChoice(MainScheduler.getIntegerInput("Choice: "));
+        int choice = MainScheduler.getIntegerInput("Choice: ");
+        if (choice < 1 || choice > 5) {
+            System.out.println("Invalid choice!");
+            showDoctorMenu();
+            return;
+        }
+        handleDoctorMenuChoice(choice);
     }
 
     static void handleDoctorMenuChoice(int choice) {
@@ -33,8 +40,6 @@ public class UserFunctions {
             case 5:
                 MainScheduler.performLogout();
                 break;
-            default:
-                System.out.println("Invalid choice!");
         }
     }
 
@@ -49,7 +54,7 @@ public class UserFunctions {
 
         System.out.println("\n----- My Scheduled Appointments -----");
         System.out.printf("%-10s %-15s %-20s %-15s %-10s\n", "ID", "Patient", "Date", "Reason", "Status");
-        System.out.println("-------------------------------------------------");
+        System.out.println("------------------------------------------------------------");
         appointments.sort((a1, a2) -> a1.appointmentDate.compareTo(a2.appointmentDate));
         for (MainScheduler.AppointmentNode appt : appointments) {
             System.out.printf("%-10s %-15s %-20s %-15s %-10s\n",
@@ -89,13 +94,14 @@ public class UserFunctions {
             }
         } else {
             System.out.println("Invalid selection!");
+            cancelDoctorAppointment();
         }
     }
 
     static void displayAppointmentsForCancellation(ArrayList<MainScheduler.AppointmentNode> appointments) {
         System.out.println("\n----- My Appointments -----");
         System.out.printf("%-5s %-10s %-15s %-20s %-15s\n", "No.", "ID", "Patient", "Date", "Reason");
-        System.out.println("-------------------------------------------------");
+        System.out.println("------------------------------------------------------------");
         for (int i = 0; i < appointments.size(); i++) {
             MainScheduler.AppointmentNode appt = appointments.get(i);
             System.out.printf("%-5d %-10s %-15s %-20s %-15s\n",
@@ -106,13 +112,17 @@ public class UserFunctions {
     }
 
     static boolean confirmCancellation(String appointmentID) {
-        String confirmation = MainScheduler.getStringInput(
-                "Confirm cancellation of appointment " + appointmentID + "? (y/n): ");
-        if (!confirmation.equalsIgnoreCase("y")) {
-            System.out.println("Cancellation cancelled!");
-            return false;
+        while (true) {
+            String confirmation = MainScheduler.getStringInput(
+                    "Confirm cancellation of appointment " + appointmentID + "? (y/n): ");
+            if (confirmation.equalsIgnoreCase("y")) {
+                return true;
+            } else if (confirmation.equalsIgnoreCase("n")) {
+                System.out.println("Cancellation cancelled!");
+                return false;
+            }
+            System.out.println("Please enter 'y' or 'n'!");
         }
-        return true;
     }
 
     static void cancelAppointment(MainScheduler.AppointmentNode appt) {
@@ -130,17 +140,12 @@ public class UserFunctions {
 
     static void displayPatientHistory() {
         AdminFunctions.displayPatients();
-        String patientID = MainScheduler.getStringInput("Enter Patient ID: ");
-        if (AdminFunctions.findPatientIndex(patientID) == -1) {
-            System.out.println("Patient not found!");
-            return;
-        }
+        String patientID = AdminFunctions.getValidPatientID("Enter Patient ID: ");
 
         System.out.println("\n----- Patient History -----");
         System.out.printf("%-10s %-15s %-20s %-15s %-10s %-20s\n",
                 "ID", "Doctor", "Date", "Reason", "Status", "Updated");
-        System.out.println("-------------------------------------------------");
-
+        System.out.println("--------------------------------------------------------------------");
         boolean hasHistory = false;
         for (String[] record : MainScheduler.appointmentHistory) {
             if (record[1].equals(patientID)) {
@@ -162,17 +167,20 @@ public class UserFunctions {
         }
 
         String[] doctor = MainScheduler.doctors.get(index);
-        System.out.println("Current: Phone: " + doctor[3] + ", Specialty: " + doctor[2]);
+        System.out.println("Current: Phone: " + doctor[3] + ", Specialty: " + doctor[5] + ", Experience: " + doctor[6]);
 
         String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
-        if (!MainScheduler.isPhoneNumberUnique(phone)) {
+        if (!AdminFunctions.isPhoneNumberUniqueForEdit(phone, MainScheduler.userID)) {
             System.out.println("Phone number already in use!");
+            editDoctorProfile();
             return;
         }
         String specialty = AdminFunctions.selectSpecialty();
+        String experience = AdminFunctions.getValidExperience("New Years of Experience: ");
 
         doctor[3] = phone;
-        doctor[2] = specialty;
+        doctor[5] = specialty;
+        doctor[6] = experience;
 
         MainScheduler.recordLog("Doctor profile updated: " + MainScheduler.userID);
         DataManager.saveAllData();
@@ -185,16 +193,27 @@ public class UserFunctions {
         if (!MainScheduler.doctors.isEmpty()) {
             System.out.println("2. Book Appointment");
         }
-        System.out.println("3. View Appointments");
-        System.out.println("4. Cancel Appointment");
-        System.out.println("5. Update Profile");
-        System.out.println("6. Logout");
+        System.out.println((MainScheduler.doctors.isEmpty() ? "2" : "3") + ". View Appointments");
+        System.out.println((MainScheduler.doctors.isEmpty() ? "3" : "4") + ". Cancel Appointment");
+        System.out.println((MainScheduler.doctors.isEmpty() ? "4" : "5") + ". Update Profile");
+        System.out.println((MainScheduler.doctors.isEmpty() ? "5" : "6") + ". Logout");
         System.out.println("=======================");
-        handlePatientMenuChoice(MainScheduler.getIntegerInput("Choice: "));
+        int choice = MainScheduler.getIntegerInput("Choice: ");
+        int maxChoice = MainScheduler.doctors.isEmpty() ? 5 : 6;
+        if (choice < 1 || choice > maxChoice) {
+            System.out.println("Invalid choice!");
+            showPatientMenu();
+            return;
+        }
+        handlePatientMenuChoice(choice);
     }
 
     static void handlePatientMenuChoice(int choice) {
-        switch (choice) {
+        int adjustedChoice = choice;
+        if (MainScheduler.doctors.isEmpty()) {
+            if (choice > 1) adjustedChoice++;
+        }
+        switch (adjustedChoice) {
             case 1:
                 displayDoctors();
                 break;
@@ -202,7 +221,7 @@ public class UserFunctions {
                 if (!MainScheduler.doctors.isEmpty()) {
                     bookAppointment();
                 } else {
-                    System.out.println("Invalid choice!");
+                    displayPatientAppointments();
                 }
                 break;
             case 3:
@@ -217,8 +236,6 @@ public class UserFunctions {
             case 6:
                 MainScheduler.performLogout();
                 break;
-            default:
-                System.out.println("Invalid choice!");
         }
     }
 
@@ -228,67 +245,116 @@ public class UserFunctions {
             return;
         }
 
-        System.out.println("\n----- Available Doctors -----");
-        System.out.printf("%-10s %-15s %-15s\n", "ID", "Specialty", "Phone");
-        System.out.println("--------------------------------------------");
+        String specialty = AdminFunctions.selectSpecialty();
+        ArrayList<String[]> specialtyDoctors = new ArrayList<>();
         for (String[] doctor : MainScheduler.doctors) {
-            if (doctor[4].equals("Active")) {
-                System.out.printf("%-10s %-15s %-15s\n", doctor[0], doctor[2], doctor[3]);
+            if (doctor[4].equals("Active") && doctor[5].equals(specialty)) {
+                specialtyDoctors.add(doctor);
             }
+        }
+
+        if (specialtyDoctors.isEmpty()) {
+            System.out.println("No active doctors available for " + specialty + "!");
+            return;
+        }
+
+        System.out.println("\n----- Available " + specialty + " Doctors -----");
+        System.out.printf("%-10s %-20s %-15s %-15s %-10s\n", "ID", "Name", "Phone", "Specialty", "Exp (Yrs)");
+        System.out.println("------------------------------------------------------------");
+        for (String[] doctor : specialtyDoctors) {
+            String phone = AdminFunctions.formatPhoneNumber(doctor[3]);
+            System.out.printf("%-10s %-20s %-15s %-15s %-10s\n",
+                    doctor[0], doctor[1], phone, doctor[5], doctor[6]);
         }
     }
 
     static void bookAppointment() {
-        if (MainScheduler.doctors.isEmpty()) {
-            System.out.println("No doctors available!");
-            return;
-        }
-
         System.out.println("Note: Appointments are 30 minutes long.");
-        displayDoctors();
-        String doctorID = MainScheduler.getStringInput("Doctor ID: ");
-        int index = AdminFunctions.findDoctorIndex(doctorID);
+        String specialty = AdminFunctions.selectSpecialty();
+        ArrayList<String[]> specialtyDoctors = new ArrayList<>();
+        for (String[] doctor : MainScheduler.doctors) {
+            if (doctor[4].equals("Active") && doctor[5].equals(specialty)) {
+                specialtyDoctors.add(doctor);
+            }
+        }
 
-        if (index == -1 || !MainScheduler.doctors.get(index)[4].equals("Active")) {
-            System.out.println("Invalid or inactive doctor!");
+        if (specialtyDoctors.isEmpty()) {
+            System.out.println("No active doctors available for " + specialty + "!");
             return;
         }
 
-        String dateStr = getValidAppointmentDate("Date (dd/MM/yyyy): ");
+        System.out.println("\n----- Available " + specialty + " Doctors -----");
+        System.out.printf("%-10s %-20s %-15s %-15s %-10s\n", "ID", "Name", "Phone", "Specialty", "Exp (Yrs)");
+        System.out.println("------------------------------------------------------------");
+        for (String[] doctor : specialtyDoctors) {
+            String phone = AdminFunctions.formatPhoneNumber(doctor[3]);
+            System.out.printf("%-10s %-20s %-15s %-15s %-10s\n",
+                    doctor[0], doctor[1], phone, doctor[5], doctor[6]);
+        }
+
+        String doctorID = getValidDoctorIDForSpecialty("Doctor ID: ", specialty);
+        String dateStr = getValidFutureAppointmentDate("Date (dd/MM/yyyy): ");
+        Date date;
         try {
-            Date date = MainScheduler.dateOnlyFormat.parse(dateStr);
-            if (date.before(new Date())) {
-                System.out.println("Cannot book past dates!");
-                return;
-            }
-
-            String time = getAvailableSlot(doctorID, date);
-            if (time == null) {
-                System.out.println("No available slots!");
-                return;
-            }
-
-            String dateTimeStr = dateStr + " " + time;
-            String reason = MainScheduler.getStringInput("Reason: ");
-            String requestID = "R" + String.format("%03d", MainScheduler.appointmentRequests.size() + 1);
-
-            String[] request = { requestID, MainScheduler.userID, doctorID, dateTimeStr, reason };
-            MainScheduler.appointmentRequests.add(request);
-
-            MainScheduler.recordLog("New appointment request: " + requestID);
-            DataManager.saveAllData();
-            System.out.println("Appointment request submitted!");
+            date = MainScheduler.dateOnlyFormat.parse(dateStr);
         } catch (ParseException e) {
             System.out.println("Invalid date format!");
+            bookAppointment();
+            return;
+        }
+
+        String time = getAvailableSlot(doctorID, date);
+        if (time == null) {
+            System.out.println("No available slots!");
+            bookAppointment();
+            return;
+        }
+
+        String dateTimeStr = dateStr + " " + time;
+        String reason = MainScheduler.getStringInput("Reason: ");
+        if (reason.trim().isEmpty()) {
+            System.out.println("Reason cannot be empty!");
+            bookAppointment();
+            return;
+        }
+
+        AdminFunctions.createAppointment(MainScheduler.userID, doctorID, dateTimeStr, reason);
+        DataManager.saveAllData();
+        System.out.println("Appointment booked successfully!");
+    }
+
+    static String getValidDoctorIDForSpecialty(String prompt, String specialty) {
+        while (true) {
+            String doctorID = MainScheduler.getStringInput(prompt);
+            int index = AdminFunctions.findDoctorIndex(doctorID);
+            if (index != -1 && MainScheduler.doctors.get(index)[4].equals("Active") &&
+                    MainScheduler.doctors.get(index)[5].equals(specialty)) {
+                return doctorID;
+            }
+            System.out.println("Invalid or inactive doctor for selected specialty!");
         }
     }
 
-    static String getValidAppointmentDate(String prompt) {
+    static String getValidFutureAppointmentDate(String prompt) {
         while (true) {
             String date = MainScheduler.getStringInput(prompt);
             try {
-                MainScheduler.dateOnlyFormat.parse(date);
-                return date;
+                Date inputDate = MainScheduler.dateOnlyFormat.parse(date);
+                Calendar today = Calendar.getInstance();
+                today.set(Calendar.HOUR_OF_DAY, 0);
+                today.set(Calendar.MINUTE, 0);
+                today.set(Calendar.SECOND, 0);
+                today.set(Calendar.MILLISECOND, 0);
+                Calendar inputCal = Calendar.getInstance();
+                inputCal.setTime(inputDate);
+                inputCal.set(Calendar.HOUR_OF_DAY, 0);
+                inputCal.set(Calendar.MINUTE, 0);
+                inputCal.set(Calendar.SECOND, 0);
+                inputCal.set(Calendar.MILLISECOND, 0);
+                if (!inputCal.before(today)) {
+                    return date;
+                }
+                System.out.println("Cannot book past or current dates!");
             } catch (ParseException e) {
                 System.out.println("Please use a valid dd/MM/yyyy date!");
             }
@@ -320,11 +386,16 @@ public class UserFunctions {
             System.out.println((i + 1) + ". " + available.get(i));
         }
 
-        int choice = MainScheduler.getIntegerInput("Select slot number (0 to back): ");
-        if (choice == 0 || choice < 1 || choice > available.size()) {
-            return null;
+        while (true) {
+            int choice = MainScheduler.getIntegerInput("Select slot number (0 to back): ");
+            if (choice == 0) {
+                return null;
+            }
+            if (choice >= 1 && choice <= available.size()) {
+                return available.get(choice - 1);
+            }
+            System.out.println("Please select a valid slot number (1-" + available.size() + ") or 0 to back!");
         }
-        return available.get(choice - 1);
     }
 
     static boolean hasSchedulingConflict(String doctorID, Date date) {
@@ -346,35 +417,20 @@ public class UserFunctions {
         ArrayList<MainScheduler.AppointmentNode> appointments = new ArrayList<>();
         collectPatientAppointments(MainScheduler.userID, appointments);
 
-        if (!appointments.isEmpty()) {
-            System.out.println("\n----- My Appointments -----");
-            System.out.printf("%-10s %-15s %-20s %-15s %-10s\n", "ID", "Doctor", "Date", "Reason", "Status");
-            System.out.println("-------------------------------------------------");
-            appointments.sort((a1, a2) -> a1.appointmentDate.compareTo(a2.appointmentDate));
-            for (MainScheduler.AppointmentNode appt : appointments) {
-                System.out.printf("%-10s %-15s %-20s %-15s %-10s\n",
-                        appt.appointmentID, appt.doctorID,
-                        MainScheduler.dateTimeFormat.format(appt.appointmentDate),
-                        appt.appointmentReason, appt.appointmentStatus);
-            }
+        if (appointments.isEmpty()) {
+            System.out.println("No appointments!");
+            return;
         }
 
-        boolean hasRequests = false;
-        for (String[] request : MainScheduler.appointmentRequests) {
-            if (request[1].equals(MainScheduler.userID)) {
-                if (!hasRequests) {
-                    System.out.println("\n----- Pending Requests -----");
-                    System.out.printf("%-10s %-15s %-20s %-15s\n", "ID", "Doctor", "Date", "Reason");
-                    System.out.println("--------------------------------------------");
-                    hasRequests = true;
-                }
-                System.out.printf("%-10s %-15s %-20s %-15s\n",
-                        request[0], request[2], request[3], request[4]);
-            }
-        }
-
-        if (appointments.isEmpty() && !hasRequests) {
-            System.out.println("No appointments or pending requests!");
+        System.out.println("\n----- My Appointments -----");
+        System.out.printf("%-10s %-15s %-20s %-15s %-10s\n", "ID", "Doctor", "Date", "Reason", "Status");
+        System.out.println("------------------------------------------------------------");
+        appointments.sort((a1, a2) -> a1.appointmentDate.compareTo(a2.appointmentDate));
+        for (MainScheduler.AppointmentNode appt : appointments) {
+            System.out.printf("%-10s %-15s %-20s %-15s %-10s\n",
+                    appt.appointmentID, appt.doctorID,
+                    MainScheduler.dateTimeFormat.format(appt.appointmentDate),
+                    appt.appointmentReason, appt.appointmentStatus);
         }
     }
 
@@ -404,7 +460,7 @@ public class UserFunctions {
 
         System.out.println("\n----- My Appointments -----");
         System.out.printf("%-5s %-10s %-15s %-20s %-15s %-10s\n", "No.", "ID", "Doctor", "Date", "Reason", "Status");
-        System.out.println("-------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------");
         for (int i = 0; i < cancellable.size(); i++) {
             MainScheduler.AppointmentNode appt = cancellable.get(i);
             System.out.printf("%-5d %-10s %-15s %-20s %-15s %-10s\n",
@@ -423,6 +479,7 @@ public class UserFunctions {
                 long timeDiff = appt.appointmentDate.getTime() - new Date().getTime();
                 if (timeDiff < 86400000) {
                     System.out.println("Cannot cancel: Less than 24 hours until appointment!");
+                    cancelPatientAppointment();
                     return;
                 }
                 cancelAppointment(appt);
@@ -430,6 +487,7 @@ public class UserFunctions {
             }
         } else {
             System.out.println("Invalid selection!");
+            cancelPatientAppointment();
         }
     }
 
@@ -444,8 +502,9 @@ public class UserFunctions {
         System.out.println("Current: Phone: " + patient[3]);
 
         String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
-        if (!MainScheduler.isPhoneNumberUnique(phone)) {
+        if (!AdminFunctions.isPhoneNumberUniqueForPatientEdit(phone, MainScheduler.userID)) {
             System.out.println("Phone number already in use!");
+            editPatientProfile();
             return;
         }
         patient[3] = phone;

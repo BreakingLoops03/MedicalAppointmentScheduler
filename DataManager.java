@@ -18,7 +18,6 @@ public class DataManager {
         loadPatientData();
         loadDoctorData();
         loadAppointmentData();
-        loadRequestData();
         loadLogData();
     }
 
@@ -28,7 +27,6 @@ public class DataManager {
                 MainScheduler.PATIENTS_FILE,
                 MainScheduler.DOCTORS_FILE,
                 MainScheduler.APPOINTMENTS_FILE,
-                MainScheduler.REQUESTS_FILE,
                 MainScheduler.LOGS_FILE
         };
 
@@ -51,7 +49,6 @@ public class DataManager {
         savePatientData();
         saveDoctorData();
         saveAppointmentData();
-        saveRequestData();
         saveLogData();
     }
 
@@ -60,8 +57,9 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 2) {
-                    String[] userData = { parts[1] };
+                if (parts.length >= 2) {
+                    String[] userData = new String[parts.length - 1];
+                    System.arraycopy(parts, 1, userData, 0, parts.length - 1);
                     MainScheduler.users.put(parts[0], userData);
                 } else {
                     System.out.println("Skipping invalid user data: " + line);
@@ -76,7 +74,10 @@ public class DataManager {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(MainScheduler.USERS_FILE))) {
             for (var entry : MainScheduler.users.entrySet()) {
                 String[] data = entry.getValue();
-                writer.write(String.join(DELIMITER, entry.getKey(), data[0]));
+                String[] line = new String[data.length + 1];
+                line[0] = entry.getKey();
+                System.arraycopy(data, 0, line, 1, data.length);
+                writer.write(String.join(DELIMITER, line));
                 writer.newLine();
             }
         } catch (IOException e) {
@@ -90,7 +91,7 @@ public class DataManager {
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
                 if (parts.length == 5 && parts[3].matches("\\d{10}") &&
-                    (parts[4].equals("Active") || parts[4].equals("Inactive"))) {
+                        (parts[4].equals("Active") || parts[4].equals("Inactive"))) {
                     MainScheduler.patients.add(parts);
                 } else {
                     System.out.println("Skipping invalid patient data: " + line);
@@ -117,7 +118,9 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 5) {
+                if (parts.length == 7 && parts[3].matches("\\d{10}") &&
+                        (parts[4].equals("Active") || parts[4].equals("Inactive")) &&
+                        parts[6].matches("\\d+")) {
                     MainScheduler.doctors.add(parts);
                 } else {
                     System.out.println("Skipping invalid doctor data: " + line);
@@ -144,7 +147,25 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length >= 7) {
+                if (parts.length == 7) {
+                    boolean validDoctor = false;
+                    boolean validPatient = false;
+                    for (String[] doctor : MainScheduler.doctors) {
+                        if (doctor[0].equals(parts[2])) {
+                            validDoctor = true;
+                            break;
+                        }
+                    }
+                    for (String[] patient : MainScheduler.patients) {
+                        if (patient[0].equals(parts[1])) {
+                            validPatient = true;
+                            break;
+                        }
+                    }
+                    if (!validDoctor || !validPatient) {
+                        System.out.println("Skipping invalid appointment data: " + line);
+                        continue;
+                    }
                     MainScheduler.appointmentHistory.add(parts);
                     if (!parts[5].equals("Cancelled")) {
                         try {
@@ -181,38 +202,11 @@ public class DataManager {
         MainScheduler.appointments.sort((a, b) -> a.appointmentDate.compareTo(b.appointmentDate));
     }
 
-    static void loadRequestData() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(MainScheduler.REQUESTS_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 5) {
-                    MainScheduler.appointmentRequests.add(parts);
-                } else {
-                    System.out.println("Skipping invalid request data: " + line);
-                }
-            }
-        } catch (IOException e) {
-            System.out.println("Error loading requests: " + e.getMessage());
-        }
-    }
-
-    static void saveRequestData() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(MainScheduler.REQUESTS_FILE))) {
-            for (String[] request : MainScheduler.appointmentRequests) {
-                writer.write(String.join(DELIMITER, request));
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.out.println("Error saving requests: " + e.getMessage());
-        }
-    }
-
     static void loadLogData() {
         try (BufferedReader reader = new BufferedReader(new FileReader(MainScheduler.LOGS_FILE))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                MainScheduler.operationLogs.push(line);
+                MainScheduler.operationLogs.add(line);
             }
         } catch (IOException e) {
             System.out.println("Error loading logs: " + e.getMessage());
