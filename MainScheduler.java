@@ -77,7 +77,7 @@ public class MainScheduler {
         while (true) {
             if (loggedInUser == null) {
                 displayMainMenu();
-                handleMainMenuChoice(getIntegerInput("Choice: "));
+                handleMainMenuChoice(Utilities.getIntegerInput("Choice: "));
             } else {
                 switch (userRole) {
                     case USER_ADMIN:
@@ -112,38 +112,42 @@ public class MainScheduler {
 
     static void preloadDoctors() {
         String[][] doctorData = {
-            {"D001", "anilsharma", "Anil@123", "9876543210", "Active", "Cardiology", "5"},
-            {"D002", "priyapatel", "Priya@123", "8765432109", "Active", "Cardiology", "10"},
-            {"D003", "vikrammehta", "Vikram@123", "7654321098", "Active", "Cardiology", "15"},
-            {"D004", "neharani", "Neha@123", "6543210987", "Active", "Cardiology", "20"},
-            {"D005", "rohitgupta", "Rohit@123", "9876543211", "Active", "Cardiology", "25"},
-            {"D006", "rahulverma", "Rahul@123", "8765432110", "Active", "Neurology", "7"},
-            {"D007", "swetasingh", "Sweta@123", "7654321099", "Active", "Neurology", "12"},
-            {"D008", "arunkumar", "Arun@123", "6543210988", "Active", "Neurology", "18"},
-            {"D009", "meenakshi", "Meenakshi@123", "9876543212", "Active", "Neurology", "22"},
-            {"D010", "sanjayjain", "Sanjay@123", "8765432111", "Active", "Neurology", "27"},
-            {"D011", "kavitashah", "Kavita@123", "7654321100", "Active", "Orthopedics", "6"},
-            {"D012", "manishdesai", "Manish@123", "6543210989", "Active", "Orthopedics", "11"},
-            {"D013", "anjalinair", "Anjali@123", "9876543213", "Active", "Orthopedics", "16"},
-            {"D014", "deepakjoshi", "Deepak@123", "8765432112", "Active", "Orthopedics", "21"},
-            {"D015", "ritikapandey", "Ritika@123", "7654321101", "Active", "Orthopedics", "26"},
-            {"D016", "sureshreddy", "Suresh@123", "6543210990", "Active", "Pediatrics", "8"},
-            {"D017", "poojamishra", "Pooja@123", "9876543214", "Active", "Pediatrics", "13"},
-            {"D018", "amitabhpal", "Amitabh@123", "8765432113", "Active", "Pediatrics", "19"},
-            {"D019", "shraddhadas", "Shraddha@123", "7654321102", "Active", "Pediatrics", "24"},
-            {"D020", "naveenroy", "Naveen@123", "6543210991", "Active", "Pediatrics", "29"},
-            {"D021", "lakshmirao", "Lakshmi@123", "9876543215", "Active", "General Medicine", "9"},
-            {"D022", "vivekbansal", "Vivek@123", "8765432114", "Active", "General Medicine", "14"},
-            {"D023", "sonalimishra", "Sonali@123", "7654321103", "Active", "General Medicine", "17"},
-            {"D024", "rajeshkhanna", "Rajesh@123", "6543210992", "Active", "General Medicine", "23"},
-            {"D025", "preetisingh", "Preeti@123", "9876543216", "Active", "General Medicine", "28"}
+                { "D001", "anilsharma", "Anil@123", "9876543210", "Active", "Cardiology", "5", "Anil Sharma" },
+                { "D002", "priyapatel", "Priya@123", "8765432109", "Active", "Cardiology", "10", "Priya Patel" },
+                { "D003", "vikrammehta", "Vikram@123", "7654321098", "Active", "Cardiology", "15", "Vikram Mehta" },
+                { "D004", "neharani", "Neha@123", "6543210987", "Active", "Cardiology", "20", "Neha Rani" },
+                { "D005", "rohitgupta", "Rohit@123", "9876543211", "Active", "Cardiology", "25", "Rohit Gupta" },
+                { "D006", "rahulverma", "Rahul@123", "8765432110", "Active", "Neurology", "7", "Rahul Verma" },
+                { "D007", "swetasingh", "Sweta@123", "7654321099", "Active", "Neurology", "12", "Sweta Singh" },
+                { "D008", "arunkumar", "Arun@123", "6543210988", "Active", "Neurology", "18", "Arun Kumar" },
+                { "D009", "meenakshi", "Meenakshi@123", "9876543212", "Active", "Neurology", "22", "Meenakshi" },
+                { "D010", "sanjayjain", "Sanjay@123", "8765432111", "Active", "Neurology", "27", "Sanjay Jain" },
+                { "D011", "kavitashah", "Kavita@123", "7654321100", "Active", "Orthopedics", "6", "Kavita Shah" },
+                { "D012", "manishdesai", "Manish@123", "6543210989", "Active", "Orthopedics", "11", "Manish Desai" },
+                { "D013", "anjalinair", "Anjali@123", "9876543213", "Active", "Orthopedics", "16", "Anjali Nair" },
+                { "D014", "deepakjoshi", "Deepak@123", "8765432112", "Active", "Orthopedics", "21", "Deepak Joshi" },
+                { "D015", "ritikapandey", "Ritika@123", "7654321101", "Active", "Orthopedics", "26", "Ritika Pandey" },
+                { "D016", "sureshreddy", "Suresh@123", "6543210990", "Active", "Pediatrics", "8", "Suresh Reddy" },
+                { "D017", "poojamishra", "Pooja@123", "9876543214", "Active", "Pediatrics", "13", "Pooja Mishra" },
+                { "D018", "amitabhpal", "Amitabh@123", "8765432113", "Active", "Pediatrics", "19", "Amitabh Pal" },
+                { "D019", "shraddhadas", "Shraddha@123", "7654321102", "Active", "Pediatrics", "24", "Shraddha Das" },
+                { "D020", "naveenroy", "Naveen@123", "6543210991", "Active", "Pediatrics", "29", "Naveen Roy" },
+                { "D021", "lakshmirao", "Lakshmi@123", "9876543215", "Active", "General Medicine", "9", "Lakshmi Rao" },
+                { "D022", "vivekbansal", "Vivek@123", "8765432114", "Active", "General Medicine", "14",
+                        "Vivek Bansal" },
+                { "D023", "sonalimishra", "Sonali@123", "7654321103", "Active", "General Medicine", "17",
+                        "Sonali Mishra" },
+                { "D024", "rajeshkhanna", "Rajesh@123", "6543210992", "Active", "General Medicine", "23",
+                        "Rajesh Khanna" },
+                { "D025", "preetisingh", "Preeti@123", "9876543216", "Active", "General Medicine", "28",
+                        "Preeti Singh" }
         };
 
         for (String[] data : doctorData) {
             String[] userData = { String.valueOf(USER_DOCTOR), data[2] };
             users.put(data[1], userData);
             doctors.add(data);
-            recordLog("Added doctor: " + data[1]);
+            recordLog("Added doctor: " + data[7]);
         }
         DataManager.saveAllData();
     }
@@ -174,69 +178,83 @@ public class MainScheduler {
     }
 
     static void performLogin() {
-        String username = getValidUsername("Username: ");
-        String password = getStringInput("Password: ");
+        String input = Utilities.getStringInput("Username or Name: ");
+        String password = Utilities.getStringInput("Password: ");
+        String normalizedInput = input.replaceAll("\\s+", "").toLowerCase();
 
-        if (!users.containsKey(username)) {
-            System.out.println("User not found!");
-            performLogin();
-            return;
-        }
-
-        String[] userData = users.get(username);
-        int role = Integer.parseInt(userData[0]);
-
-        if (username.equals("admin") && password.equals(userData[1])) {
-            handleLoginSuccess(username, USER_ADMIN, "A001");
-            return;
-        }
-
-        if (role == USER_PATIENT) {
-            boolean validCredentials = false;
-            String patientID = null;
-            for (String[] patient : patients) {
-                if (patient[1].equals(username) && patient[2].equals(password)) {
-                    validCredentials = true;
-                    patientID = patient[0];
-                    if (patient[4].equals("Inactive")) {
-                        System.out.println("Account deactivated! Contact admin.");
-                        performLogin();
-                        return;
-                    }
-                    break;
-                }
-            }
-            if (!validCredentials) {
+        // Check for admin login
+        if (normalizedInput.equals("admin") && users.containsKey("admin")) {
+            String[] userData = users.get("admin");
+            if (password.equals(userData[1])) {
+                handleLoginSuccess("admin", USER_ADMIN, "A001");
+                return;
+            } else {
                 System.out.println("Incorrect password!");
                 performLogin();
                 return;
             }
-            handleLoginSuccess(username, USER_PATIENT, patientID);
-        } else if (role == USER_DOCTOR) {
-            boolean validCredentials = false;
-            String doctorID = null;
+        }
+
+        // Check for doctor login
+        String doctorUsername = null;
+        String doctorID = null;
+        for (String[] doctor : doctors) {
+            if (doctor.length > 7 && (doctor[7].replaceAll("\\s+", "").toLowerCase().equals(normalizedInput)
+                    || doctor[1].equals(normalizedInput))) {
+                doctorUsername = doctor[1];
+                doctorID = doctor[0];
+                break;
+            }
+        }
+        if (doctorUsername != null && users.containsKey(doctorUsername)) {
+            String[] userData = users.get(doctorUsername);
             for (String[] doctor : doctors) {
-                if (doctor[1].equals(username) && doctor[2].equals(password)) {
-                    validCredentials = true;
-                    doctorID = doctor[0];
+                if (doctor[1].equals(doctorUsername) && doctor[2].equals(password)) {
                     if (doctor[4].equals("Inactive")) {
                         System.out.println("Account deactivated! Contact admin.");
                         performLogin();
                         return;
                     }
-                    break;
+                    handleLoginSuccess(doctorUsername, USER_DOCTOR, doctorID);
+                    return;
                 }
             }
-            if (!validCredentials) {
-                System.out.println("Incorrect password!");
-                performLogin();
-                return;
-            }
-            handleLoginSuccess(username, USER_DOCTOR, doctorID);
-        } else {
-            System.out.println("Invalid role!");
+            System.out.println("Incorrect password!");
             performLogin();
+            return;
         }
+
+        // Check for patient login
+        String patientUsername = null;
+        String patientID = null;
+        for (String[] patient : patients) {
+            if ((patient[1].equals(normalizedInput) || (patient.length > 5
+                    && patient[5].replaceAll("\\s+", "").toLowerCase().equals(normalizedInput)))) {
+                patientUsername = patient[1];
+                patientID = patient[0];
+                break;
+            }
+        }
+        if (patientUsername != null && users.containsKey(patientUsername)) {
+            String[] userData = users.get(patientUsername);
+            for (String[] patient : patients) {
+                if (patient[1].equals(patientUsername) && patient[2].equals(password)) {
+                    if (patient[4].equals("Inactive")) {
+                        System.out.println("Account deactivated! Contact admin.");
+                        performLogin();
+                        return;
+                    }
+                    handleLoginSuccess(patientUsername, USER_PATIENT, patientID);
+                    return;
+                }
+            }
+            System.out.println("Incorrect password!");
+            performLogin();
+            return;
+        }
+
+        System.out.println("User not found!");
+        performLogin();
     }
 
     static void handleLoginSuccess(String username, int role, String id) {
@@ -248,98 +266,36 @@ public class MainScheduler {
     }
 
     static void registerPatient() {
-        String username = getValidNewUsername("Enter username: ");
-        String password = getValidPassword("Enter password: ");
-        String phone = getValidPhoneNumber("Enter phone number: ");
+        String usernameInput = Utilities.getStringInput("Enter username: ");
+        String normalizedUsername = usernameInput.replaceAll("\\s+", "").toLowerCase();
+        if (!Utilities.isValidUsername(usernameInput)) {
+            System.out.println("Username must be alphanumeric or contain spaces!");
+            registerPatient();
+            return;
+        }
+        if (users.containsKey(normalizedUsername)) {
+            System.out.println("Username already taken!");
+            registerPatient();
+            return;
+        }
+        String displayName = Utilities.getStringInput("Enter full name: ");
+        String password = Utilities.getValidPassword("Enter password: ");
+        String phone = Utilities.getValidPhoneNumber("Enter phone number: ");
         String patientID = "P" + String.format("%03d", patients.size() + 1);
 
         String[] userData = { String.valueOf(USER_PATIENT), password };
-        String[] patientData = { patientID, username, password, phone, "Active" };
+        String[] patientData = { patientID, normalizedUsername, password, phone, "Active", displayName };
 
-        users.put(username, userData);
+        users.put(normalizedUsername, userData);
         patients.add(patientData);
-        recordLog("New patient registered: " + username);
+        recordLog("New patient registered: " + displayName);
         DataManager.saveAllData();
-        System.out.println("Registration successful!");
+        System.out.println("Registration successful! Your login username is: " + normalizedUsername);
     }
 
     static void recordLog(String message) {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         operationLogs.add(timestamp + " - " + message);
-    }
-
-    static String getStringInput(String prompt) {
-        System.out.print(prompt);
-        String input = scanner.nextLine().trim();
-        if (input.isEmpty()) {
-            System.out.println("Input cannot be empty!");
-            return getStringInput(prompt);
-        }
-        return input;
-    }
-
-    static int getIntegerInput(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            try {
-                String input = scanner.nextLine().trim();
-                return Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number!");
-            }
-        }
-    }
-
-    static String getValidUsername(String prompt) {
-        while (true) {
-            String username = getStringInput(prompt);
-            if (users.containsKey(username)) {
-                System.out.println("Username already taken!");
-                continue;
-            }
-            return username;
-        }
-    }
-
-    static String getValidNewUsername(String prompt) {
-        while (true) {
-            String username = getStringInput(prompt);
-            if (users.containsKey(username)) {
-                System.out.println("Username already taken!");
-                continue;
-            }
-            return username;
-        }
-    }
-
-    static String getValidPhoneNumber(String prompt) {
-        while (true) {
-            String phone = getStringInput(prompt);
-            String digits = phone.replaceAll("[^0-9]", "");
-            if (digits.length() != 10) {
-                System.out.println("Phone number must be 10 digits!");
-                continue;
-            }
-            if (isPhoneNumberUnique(digits)) {
-                return digits;
-            }
-            System.out.println("Phone number already in use!");
-        }
-    }
-
-    static boolean isPhoneNumberUnique(String phone) {
-        return patients.stream().noneMatch(p -> p[3].equals(phone)) &&
-               doctors.stream().noneMatch(d -> d[3].equals(phone));
-    }
-
-    static String getValidPassword(String prompt) {
-        while (true) {
-            String password = getStringInput(prompt);
-            if (password.length() >= 6) {
-                return password;
-            }
-            System.out.println("Password must be at least 6 characters!");
-        }
     }
 
     static void performLogout() {

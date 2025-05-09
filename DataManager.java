@@ -13,12 +13,17 @@ public class DataManager {
     private static final String DELIMITER = "|";
 
     static void loadAllData() {
-        initializeFiles();
-        loadUserData();
-        loadPatientData();
-        loadDoctorData();
-        loadAppointmentData();
-        loadLogData();
+        try {
+            initializeFiles();
+            loadUserData();
+            loadPatientData();
+            loadDoctorData();
+            loadAppointmentData();
+            loadLogData();
+        } catch (Exception e) {
+            System.out.println("Error loading data: " + e.getMessage());
+            System.exit(1);
+        }
     }
 
     static void initializeFiles() {
@@ -33,23 +38,26 @@ public class DataManager {
         for (String file : files) {
             File f = new File(file);
             try {
-                if (!f.exists() && !f.createNewFile()) {
-                    System.out.println("Cannot create file: " + file);
-                    System.exit(1);
+                if (!f.exists()) {
+                    f.createNewFile();
                 }
             } catch (IOException e) {
-                System.out.println("Error creating file: " + file + " - " + e.getMessage());
+                System.out.println("Error creating file " + file + ": " + e.getMessage());
                 System.exit(1);
             }
         }
     }
 
     static void saveAllData() {
-        saveUserData();
-        savePatientData();
-        saveDoctorData();
-        saveAppointmentData();
-        saveLogData();
+        try {
+            saveUserData();
+            savePatientData();
+            saveDoctorData();
+            saveAppointmentData();
+            saveLogData();
+        } catch (Exception e) {
+            System.out.println("Error saving data: " + e.getMessage());
+        }
     }
 
     static void loadUserData() {
@@ -57,12 +65,10 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length >= 2) {
+                if (parts.length >= 2 && Utilities.isValidUsername(parts[0])) {
                     String[] userData = new String[parts.length - 1];
                     System.arraycopy(parts, 1, userData, 0, parts.length - 1);
                     MainScheduler.users.put(parts[0], userData);
-                } else {
-                    System.out.println("Skipping invalid user data: " + line);
                 }
             }
         } catch (IOException e) {
@@ -90,11 +96,17 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 5 && parts[3].matches("\\d{10}") &&
-                        (parts[4].equals("Active") || parts[4].equals("Inactive"))) {
-                    MainScheduler.patients.add(parts);
-                } else {
-                    System.out.println("Skipping invalid patient data: " + line);
+                if ((parts.length == 5 || parts.length == 6) && Utilities.isValidPhoneNumber(parts[3]) &&
+                        (parts[4].equals("Active") || parts[4].equals("Inactive")) &&
+                        Utilities.isValidUsername(parts[1])) {
+                    if (parts.length == 5) {
+                        String[] newParts = new String[6];
+                        System.arraycopy(parts, 0, newParts, 0, 5);
+                        newParts[5] = parts[1];
+                        MainScheduler.patients.add(newParts);
+                    } else {
+                        MainScheduler.patients.add(parts);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -118,12 +130,18 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 7 && parts[3].matches("\\d{10}") &&
+                if ((parts.length == 7 || parts.length == 8) && Utilities.isValidPhoneNumber(parts[3]) &&
                         (parts[4].equals("Active") || parts[4].equals("Inactive")) &&
-                        parts[6].matches("\\d+")) {
-                    MainScheduler.doctors.add(parts);
-                } else {
-                    System.out.println("Skipping invalid doctor data: " + line);
+                        Utilities.isValidExperience(parts[6]) &&
+                        Utilities.isValidUsername(parts[1])) {
+                    if (parts.length == 7) {
+                        String[] newParts = new String[8];
+                        System.arraycopy(parts, 0, newParts, 0, 7);
+                        newParts[7] = parts[1];
+                        MainScheduler.doctors.add(newParts);
+                    } else {
+                        MainScheduler.doctors.add(parts);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -147,23 +165,15 @@ public class DataManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\" + DELIMITER);
-                if (parts.length == 7) {
-                    boolean validDoctor = false;
-                    boolean validPatient = false;
-                    for (String[] doctor : MainScheduler.doctors) {
-                        if (doctor[0].equals(parts[2])) {
-                            validDoctor = true;
+                if (parts.length == 7 && isValidAppointment(parts)) {
+                    boolean isDuplicate = false;
+                    for (String[] existing : MainScheduler.appointmentHistory) {
+                        if (existing[0].equals(parts[0])) {
+                            isDuplicate = true;
                             break;
                         }
                     }
-                    for (String[] patient : MainScheduler.patients) {
-                        if (patient[0].equals(parts[1])) {
-                            validPatient = true;
-                            break;
-                        }
-                    }
-                    if (!validDoctor || !validPatient) {
-                        System.out.println("Skipping invalid appointment data: " + line);
+                    if (isDuplicate) {
                         continue;
                     }
                     MainScheduler.appointmentHistory.add(parts);
@@ -177,13 +187,29 @@ public class DataManager {
                             System.out.println("Skipping invalid appointment date: " + line);
                         }
                     }
-                } else {
-                    System.out.println("Skipping invalid appointment data: " + line);
                 }
             }
         } catch (IOException e) {
             System.out.println("Error loading appointments: " + e.getMessage());
         }
+    }
+
+    static boolean isValidAppointment(String[] parts) {
+        boolean validDoctor = false;
+        boolean validPatient = false;
+        for (String[] doctor : MainScheduler.doctors) {
+            if (doctor[0].equals(parts[2])) {
+                validDoctor = true;
+                break;
+            }
+        }
+        for (String[] patient : MainScheduler.patients) {
+            if (patient[0].equals(parts[1])) {
+                validPatient = true;
+                break;
+            }
+        }
+        return validDoctor && validPatient;
     }
 
     static void saveAppointmentData() {

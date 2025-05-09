@@ -13,7 +13,7 @@ public class AdminFunctions {
         System.out.println("4. View Logs");
         System.out.println("5. Logout");
         System.out.println("=====================");
-        int choice = MainScheduler.getIntegerInput("Choice: ");
+        int choice = Utilities.getIntegerInput("Choice: ");
         if (choice < 1 || choice > 5) {
             System.out.println("Invalid choice!");
             showAdminMenu();
@@ -56,7 +56,7 @@ public class AdminFunctions {
         System.out.println("6. Activate Doctor");
         System.out.println("7. Back");
         System.out.println("-------------------------");
-        int choice = MainScheduler.getIntegerInput("Choice: ");
+        int choice = Utilities.getIntegerInput("Choice: ");
         if (choice < 1 || choice > 7) {
             System.out.println("Invalid choice!");
             manageDoctorRecords();
@@ -91,19 +91,30 @@ public class AdminFunctions {
     }
 
     static void createDoctor() {
-        String username = MainScheduler.getValidNewUsername("Username: ");
-        String password = MainScheduler.getValidPassword("Password: ");
+        String displayName = Utilities.getStringInput("Full Name: ");
+        String username = displayName.replaceAll("\\s+", "").toLowerCase();
+        if (!Utilities.isValidUsername(username)) {
+            System.out.println("Generated username must be alphanumeric or contain spaces! Try a different name.");
+            createDoctor();
+            return;
+        }
+        if (MainScheduler.users.containsKey(username)) {
+            System.out.println("Generated username already taken! Try a different name.");
+            createDoctor();
+            return;
+        }
+        String password = Utilities.getValidPassword("Password: ");
         String specialty = selectSpecialty();
-        String phone = MainScheduler.getValidPhoneNumber("Phone: ");
-        String experience = getValidExperience("Years of Experience: ");
+        String phone = Utilities.getValidPhoneNumber("Phone: ");
+        String experience = Utilities.getValidExperience("Years of Experience: ");
         String doctorID = "D" + String.format("%03d", MainScheduler.doctors.size() + 1);
 
         String[] userData = { String.valueOf(MainScheduler.USER_DOCTOR), password };
-        String[] doctorData = { doctorID, username, password, phone, "Active", specialty, experience };
+        String[] doctorData = { doctorID, username, password, phone, "Active", specialty, experience, displayName };
 
         MainScheduler.users.put(username, userData);
         MainScheduler.doctors.add(doctorData);
-        MainScheduler.recordLog("Added doctor: " + username);
+        MainScheduler.recordLog("Added doctor: " + displayName);
         DataManager.saveAllData();
         System.out.println("Doctor added successfully!");
     }
@@ -116,26 +127,11 @@ public class AdminFunctions {
         }
 
         while (true) {
-            int choice = MainScheduler.getIntegerInput("Select specialty number: ");
+            int choice = Utilities.getIntegerInput("Select specialty number: ");
             if (choice >= 1 && choice <= specialties.length) {
                 return specialties[choice - 1];
             }
             System.out.println("Please select a valid specialty (1-" + specialties.length + ")!");
-        }
-    }
-
-    static String getValidExperience(String prompt) {
-        while (true) {
-            String input = MainScheduler.getStringInput(prompt);
-            try {
-                int experience = Integer.parseInt(input);
-                if (experience >= 0) {
-                    return String.valueOf(experience);
-                }
-                System.out.println("Experience must be a non-negative number!");
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number!");
-            }
         }
     }
 
@@ -149,17 +145,11 @@ public class AdminFunctions {
         System.out.printf("%-10s %-20s %-15s %-15s %-10s %-10s\n", "ID", "Name", "Phone", "Specialty", "Status", "Exp (Yrs)");
         System.out.println("------------------------------------------------------------------------");
         for (String[] doctor : MainScheduler.doctors) {
-            String phone = formatPhoneNumber(doctor[3]);
+            String phone = Utilities.formatPhoneNumber(doctor[3]);
+            String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
             System.out.printf("%-10s %-20s %-15s %-15s %-10s %-10s\n",
-                    doctor[0], doctor[1], phone, doctor[5], doctor[4], doctor[6]);
+                    doctor[0], displayName, phone, doctor[5], doctor[4], doctor[6]);
         }
-    }
-
-    static String formatPhoneNumber(String phone) {
-        if (phone.length() == 10) {
-            return phone.substring(0, 3) + "-" + phone.substring(3, 6) + "-" + phone.substring(6);
-        }
-        return phone;
     }
 
     static void editDoctor() {
@@ -168,48 +158,37 @@ public class AdminFunctions {
         int index = findDoctorIndex(doctorID);
 
         String[] doctor = MainScheduler.doctors.get(index);
-        System.out.println("Current: Phone: " + doctor[3] + ", Specialty: " + doctor[5] + ", Experience: " + doctor[6]);
+        String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
+        System.out.println("Current: Phone: " + doctor[3] + ", Specialty: " + doctor[5] + ", Experience: " + doctor[6] + ", Name: " + displayName);
 
-        String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
-        if (!isPhoneNumberUniqueForEdit(phone, doctorID)) {
+        String phone = Utilities.getValidPhoneNumber("New Phone: ");
+        if (!Utilities.isPhoneNumberUniqueForEdit(phone, doctorID, true)) {
             System.out.println("Phone number already in use!");
             editDoctor();
             return;
         }
         String specialty = selectSpecialty();
-        String experience = getValidExperience("New Years of Experience: ");
+        String experience = Utilities.getValidExperience("New Years of Experience: ");
+        String newDisplayName = Utilities.getStringInput("New Full Name: ");
 
         doctor[3] = phone;
         doctor[5] = specialty;
         doctor[6] = experience;
+        doctor[7] = newDisplayName;
 
-        MainScheduler.recordLog("Doctor updated: " + doctorID);
+        MainScheduler.recordLog("Doctor updated: " + newDisplayName);
         DataManager.saveAllData();
         System.out.println("Doctor updated successfully!");
     }
 
     static String getValidDoctorID(String prompt) {
         while (true) {
-            String doctorID = MainScheduler.getStringInput(prompt);
+            String doctorID = Utilities.getStringInput(prompt);
             if (findDoctorIndex(doctorID) != -1) {
                 return doctorID;
             }
             System.out.println("Doctor not found!");
         }
-    }
-
-    static boolean isPhoneNumberUniqueForEdit(String phone, String doctorID) {
-        for (String[] patient : MainScheduler.patients) {
-            if (patient[3].equals(phone)) {
-                return false;
-            }
-        }
-        for (String[] doctor : MainScheduler.doctors) {
-            if (doctor[3].equals(phone) && !doctor[0].equals(doctorID)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     static void deactivateDoctorAccount() {
@@ -223,14 +202,15 @@ public class AdminFunctions {
             return;
         }
 
-        if (!confirmAction("deactivation of doctor " + doctorID)) {
+        String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
+        if (!Utilities.confirmAction("deactivation of doctor " + displayName)) {
             return;
         }
 
         doctor[4] = "Inactive";
         cancelDoctorAppointments(doctorID);
 
-        MainScheduler.recordLog("Doctor deactivated: " + doctorID);
+        MainScheduler.recordLog("Doctor deactivated: " + displayName);
         DataManager.saveAllData();
         System.out.println("Doctor deactivated and all appointments cancelled!");
     }
@@ -248,15 +228,17 @@ public class AdminFunctions {
             return;
         }
 
-        if (!confirmAction("removal of doctor " + doctorID)) {
+        String[] doctor = MainScheduler.doctors.get(index);
+        String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
+        if (!Utilities.confirmAction("removal of doctor " + displayName)) {
             return;
         }
 
-        String username = MainScheduler.doctors.get(index)[1];
+        String username = doctor[1];
         MainScheduler.doctors.remove(index);
         MainScheduler.users.remove(username);
 
-        MainScheduler.recordLog("Doctor removed: " + doctorID);
+        MainScheduler.recordLog("Doctor removed: " + displayName);
         DataManager.saveAllData();
         System.out.println("Doctor removed successfully!");
     }
@@ -278,7 +260,8 @@ public class AdminFunctions {
         System.out.printf("%-10s %-20s %-15s %-15s %-10s\n", "ID", "Name", "Phone", "Specialty", "Exp (Yrs)");
         System.out.println("------------------------------------------------------------");
         for (String[] doctor : inactiveDoctors) {
-            System.out.printf("%-10s %-20s %-15s %-15s %-10s\n", doctor[0], doctor[1], doctor[3], doctor[5], doctor[6]);
+            String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
+            System.out.printf("%-10s %-20s %-15s %-15s %-10s\n", doctor[0], displayName, doctor[3], doctor[5], doctor[6]);
         }
 
         String doctorID = getValidDoctorID("Enter Doctor ID: ");
@@ -290,28 +273,15 @@ public class AdminFunctions {
             return;
         }
 
-        if (!confirmAction("activation of doctor " + doctorID)) {
+        String displayName = doctor.length > 7 ? doctor[7] : doctor[1];
+        if (!Utilities.confirmAction("activation of doctor " + displayName)) {
             return;
         }
 
         doctor[4] = "Active";
-        MainScheduler.recordLog("Doctor activated: " + doctorID);
+        MainScheduler.recordLog("Doctor activated: " + displayName);
         DataManager.saveAllData();
         System.out.println("Doctor activated successfully!");
-    }
-
-    static boolean confirmAction(String action) {
-        while (true) {
-            String confirmation = MainScheduler.getStringInput(
-                    "Confirm " + action + "? (y/n): ");
-            if (confirmation.equalsIgnoreCase("y")) {
-                return true;
-            } else if (confirmation.equalsIgnoreCase("n")) {
-                System.out.println("Action cancelled!");
-                return false;
-            }
-            System.out.println("Please enter 'y' or 'n'!");
-        }
     }
 
     static void cancelDoctorAppointments(String doctorID) {
@@ -347,10 +317,11 @@ public class AdminFunctions {
         System.out.println("1. View Patients");
         System.out.println("2. Update Patient");
         System.out.println("3. Deactivate Patient");
-        System.out.println("4. Back");
+        System.out.println("4. Delete Patient");
+        System.out.println("5. Back");
         System.out.println("--------------------------");
-        int choice = MainScheduler.getIntegerInput("Choice: ");
-        if (choice < 1 || choice > 4) {
+        int choice = Utilities.getIntegerInput("Choice: ");
+        if (choice < 1 || choice > 5) {
             System.out.println("Invalid choice!");
             managePatientRecords();
             return;
@@ -370,6 +341,9 @@ public class AdminFunctions {
                 deactivatePatientAccount();
                 break;
             case 4:
+                deletePatient();
+                break;
+            case 5:
                 break;
         }
     }
@@ -381,10 +355,11 @@ public class AdminFunctions {
         }
 
         System.out.println("\n----- Patients List -----");
-        System.out.printf("%-10s %-20s %-15s %-10s\n", "ID", "Username", "Phone", "Status");
-        System.out.println("----------------------------------------------------");
+        System.out.printf("%-10s %-20s %-20s %-15s %-10s\n", "ID", "Username", "Name", "Phone", "Status");
+        System.out.println("----------------------------------------------------------------");
         for (String[] patient : MainScheduler.patients) {
-            System.out.printf("%-10s %-20s %-15s %-10s\n", patient[0], patient[1], patient[3], patient[4]);
+            String displayName = patient.length > 5 ? patient[5] : patient[1];
+            System.out.printf("%-10s %-20s %-20s %-15s %-10s\n", patient[0], patient[1], displayName, patient[3], patient[4]);
         }
     }
 
@@ -394,43 +369,33 @@ public class AdminFunctions {
         int index = findPatientIndex(patientID);
 
         String[] patient = MainScheduler.patients.get(index);
-        System.out.println("Current: Phone: " + patient[3]);
+        String displayName = patient.length > 5 ? patient[5] : patient[1];
+        System.out.println("Current: Phone: " + patient[3] + ", Name: " + displayName);
 
-        String phone = MainScheduler.getValidPhoneNumber("New Phone: ");
-        if (!isPhoneNumberUniqueForPatientEdit(phone, patientID)) {
+        String phone = Utilities.getValidPhoneNumber("New Phone: ");
+        if (!Utilities.isPhoneNumberUniqueForEdit(phone, patientID, false)) {
             System.out.println("Phone number already in use!");
             editPatient();
             return;
         }
-        patient[3] = phone;
+        String newDisplayName = Utilities.getStringInput("New Full Name: ");
 
-        MainScheduler.recordLog("Patient updated: " + patientID);
+        patient[3] = phone;
+        patient[5] = newDisplayName;
+
+        MainScheduler.recordLog("Patient updated: " + newDisplayName);
         DataManager.saveAllData();
         System.out.println("Patient updated successfully!");
     }
 
     static String getValidPatientID(String prompt) {
         while (true) {
-            String patientID = MainScheduler.getStringInput(prompt);
+            String patientID = Utilities.getStringInput(prompt);
             if (findPatientIndex(patientID) != -1) {
                 return patientID;
             }
             System.out.println("Patient not found!");
         }
-    }
-
-    static boolean isPhoneNumberUniqueForPatientEdit(String phone, String patientID) {
-        for (String[] doctor : MainScheduler.doctors) {
-            if (doctor[3].equals(phone)) {
-                return false;
-            }
-        }
-        for (String[] patient : MainScheduler.patients) {
-            if (patient[3].equals(phone) && !patient[0].equals(patientID)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     static void deactivatePatientAccount() {
@@ -444,7 +409,8 @@ public class AdminFunctions {
             return;
         }
 
-        if (!confirmAction("deactivation of patient " + patientID)) {
+        String displayName = patient.length > 5 ? patient[5] : patient[1];
+        if (!Utilities.confirmAction("deactivation of patient " + displayName)) {
             return;
         }
 
@@ -466,9 +432,37 @@ public class AdminFunctions {
             }
         }
 
-        MainScheduler.recordLog("Patient deactivated: " + patientID);
+        MainScheduler.recordLog("Patient deactivated: " + displayName);
         DataManager.saveAllData();
         System.out.println("Patient deactivated and all appointments cancelled!");
+    }
+
+    static void deletePatient() {
+        displayPatients();
+        String patientID = getValidPatientID("Enter Patient ID: ");
+        int index = findPatientIndex(patientID);
+
+        ArrayList<MainScheduler.AppointmentNode> appointments = new ArrayList<>();
+        UserFunctions.collectPatientAppointments(patientID, appointments);
+
+        if (!appointments.isEmpty()) {
+            System.out.println("Cannot remove: Patient has appointments!");
+            return;
+        }
+
+        String[] patient = MainScheduler.patients.get(index);
+        String displayName = patient.length > 5 ? patient[5] : patient[1];
+        if (!Utilities.confirmAction("removal of patient " + displayName)) {
+            return;
+        }
+
+        String username = patient[1];
+        MainScheduler.patients.remove(index);
+        MainScheduler.users.remove(username);
+
+        MainScheduler.recordLog("Patient removed: " + displayName);
+        DataManager.saveAllData();
+        System.out.println("Patient removed successfully!");
     }
 
     static int findPatientIndex(String patientID) {
@@ -485,22 +479,29 @@ public class AdminFunctions {
             Date date = MainScheduler.dateTimeFormat.parse(dateTimeStr);
             if (UserFunctions.hasSchedulingConflict(doctorID, date)) {
                 MainScheduler.recordLog("Appointment rejected due to scheduling conflict for patient: " + patientID);
+                System.out.println("Scheduling conflict! Please choose another time.");
                 return;
             }
-
+            for (String[] existing : MainScheduler.appointmentHistory) {
+                if (existing[1].equals(patientID) && existing[2].equals(doctorID) && existing[3].equals(dateTimeStr)) {
+                    MainScheduler.recordLog("Duplicate appointment rejected for patient: " + patientID);
+                    System.out.println("Appointment already exists!");
+                    return;
+                }
+            }
             String appointmentID = "A" + String.format("%03d", MainScheduler.nextAppointmentID++);
             MainScheduler.AppointmentNode node = new MainScheduler.AppointmentNode(
                     appointmentID, patientID, doctorID, date, reason, "Scheduled");
 
             DataManager.insertAppointmentNode(node);
 
-            String[] record = { appointmentID, patientID, doctorID, dateTimeStr, reason, "Scheduled",
-                    new Date().toString() };
+            String[] record = { appointmentID, patientID, doctorID, dateTimeStr, reason, "Scheduled", new Date().toString() };
             MainScheduler.appointmentHistory.add(record);
 
             MainScheduler.recordLog("Appointment created: " + appointmentID);
         } catch (ParseException e) {
             MainScheduler.recordLog("Failed to create appointment for patient " + patientID + ": Invalid date format");
+            System.out.println("Invalid date format!");
         }
     }
 
@@ -511,12 +512,25 @@ public class AdminFunctions {
         }
 
         System.out.println("\n----- All Appointments -----");
-        System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n",
-                "ID", "Patient", "Doctor", "Date", "Reason", "Status");
+        System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n", "ID", "Patient", "Doctor", "Date", "Reason", "Status");
         System.out.println("------------------------------------------------------------");
         for (MainScheduler.AppointmentNode node : MainScheduler.appointments) {
+            String patientDisplay = node.patientID;
+            String doctorDisplay = node.doctorID;
+            for (String[] patient : MainScheduler.patients) {
+                if (patient[0].equals(node.patientID)) {
+                    patientDisplay = patient.length > 5 ? patient[5] : patient[1];
+                    break;
+                }
+            }
+            for (String[] doctor : MainScheduler.doctors) {
+                if (doctor[0].equals(node.doctorID)) {
+                    doctorDisplay = doctor.length > 7 ? doctor[7] : doctor[1];
+                    break;
+                }
+            }
             System.out.printf("%-10s %-15s %-15s %-20s %-15s %-10s\n",
-                    node.appointmentID, node.patientID, node.doctorID,
+                    node.appointmentID, patientDisplay, doctorDisplay,
                     MainScheduler.dateTimeFormat.format(node.appointmentDate),
                     node.appointmentReason, node.appointmentStatus);
         }
